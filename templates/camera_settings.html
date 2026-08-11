@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Camera Settings | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/communication_settings.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/camera_settings.css') }}?v=20260712-2">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card communication-card camera-settings-card">
+          <div class="communication-layout camera-settings-layout">
+            <section class="communication-panel error-log-panel">
+              <div class="communication-head">
+                <div>
+                  <h1>Camera Error Log</h1>
+                </div>
+                <span class="connection-status" id="cameraConnectionState">Idle</span>
+              </div>
+
+              <div class="log-filter-row">
+                <label>
+                  <span>Start Date</span>
+                  <input id="cameraLogStartDate" type="date">
+                </label>
+                <label>
+                  <span>End Date</span>
+                  <input id="cameraLogEndDate" type="date">
+                </label>
+              </div>
+
+              <div class="error-log-list" id="cameraLog"></div>
+            </section>
+
+            <section class="communication-panel camera-entry-panel">
+              <div class="communication-head">
+                <div>
+                  <h1>Camera Details</h1>
+                </div>
+                <span class="entry-mode">IP Camera</span>
+              </div>
+
+              <form class="camera-form" id="cameraForm">
+                <div class="camera-card-nav" aria-label="Camera selection">
+                  <div class="camera-selector" id="cameraSelector"></div>
+                  <button type="button" id="addCameraBtn">+ Add Camera</button>
+                </div>
+                <div class="camera-settings-grid" id="cameraSettingsGrid">
+                  {% for camera_no in range(1, 5) %}
+                  <fieldset class="camera-setting-row" data-camera-row="{{ camera_no }}" {% if camera_no != 1 %}hidden{% endif %}>
+                    <legend>Camera {{ camera_no }}</legend>
+                    <input type="hidden" data-field="cameraNo" value="{{ camera_no }}">
+                    <label class="communication-field">
+                      <span>IP Number</span>
+                      <input data-field="ipAddress" autocomplete="off" placeholder="192.168.1.10">
+                    </label>
+                    <label class="communication-field">
+                      <span>Username</span>
+                      <input data-field="username" autocomplete="off">
+                    </label>
+                    <label class="communication-field">
+                      <span>Password</span>
+                      <input data-field="password" type="password" autocomplete="new-password">
+                    </label>
+                    <label class="communication-field">
+                      <span>Port</span>
+                      <input data-field="port" type="number" min="1" max="65535" value="554">
+                    </label>
+                    <label class="communication-field camera-path-field">
+                      <span>Stream Path</span>
+                      <input data-field="streamPath" autocomplete="off" value="Streaming/Channels/102">
+                    </label>
+                    <div class="camera-row-actions">
+                      <span class="camera-row-status" data-field="status">Not Connected</span>
+                      <div class="camera-row-buttons">
+                        <button type="button" data-action="test-camera">Test Connection</button>
+                        <button type="button" data-action="delete-camera" class="danger">Delete</button>
+                      </div>
+                    </div>
+                    <div class="camera-preview" data-field="preview" hidden>
+                      <img data-field="previewImage" alt="Camera {{ camera_no }} preview">
+                      <span>Camera {{ camera_no }} Preview</span>
+                    </div>
+                  </fieldset>
+                  {% endfor %}
+                </div>
+
+                <div class="communication-actions">
+                  <button type="submit" class="primary">Save</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/camera_settings.js') }}?v=20260712-1"></script>
+{% endblock %}

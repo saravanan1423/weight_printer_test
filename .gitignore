@@ -1,0 +1,34 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+myenv/
+weider/
+.venv/
+venv/
+env/
+
+# Local app data
+instance/
+weighbridge_main.db
+*.db
+*.sqlite
+*.sqlite3
+weighment_captures/
+
+# PyInstaller output
+build/
+dist/
+*.spec.bak
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Local update staging
+updates/

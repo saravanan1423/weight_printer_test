@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}WhatsApp Settings | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/communication_settings.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/whatsapp_settings.css', v='20260724-1') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card communication-card whatsapp-settings-card">
+          <div class="communication-layout whatsapp-settings-layout">
+            <section class="communication-panel whatsapp-help-panel">
+              <div class="communication-head">
+                <div>
+                  <h1>WhatsApp Settings</h1>
+                  <p>Configure WhatsApp Web message sending for weighment saves and resend.</p>
+                </div>
+                <span class="connection-status" id="whatsappSavedState">Not Saved</span>
+              </div>
+
+              <div class="whatsapp-instructions">
+                <h2>How it works</h2>
+                <ol>
+                  <li>Enable WhatsApp sending to allow Save and Resend messages.</li>
+                  <li>Enable Send WhatsApp after Save if the message should be sent automatically after saving a weighment.</li>
+                  <li>Keep WhatsApp Web logged in on this computer.</li>
+                  <li>The message is sent only when a mobile number is available in the weighment entry.</li>
+                </ol>
+              </div>
+            </section>
+
+            <section class="communication-panel communication-entry-panel whatsapp-entry-panel">
+              <div class="communication-head">
+                <div>
+                  <h1>Message Setup</h1>
+                </div>
+                <span class="entry-mode">pywhatkit</span>
+              </div>
+
+              <form class="communication-form whatsapp-form" id="whatsappForm">
+                <label class="whatsapp-toggle whatsapp-wide-field">
+                  <input id="whatsappEnabled" type="checkbox">
+                  <span>
+                    <strong>Enable WhatsApp sending</strong>
+                    <small>If enabled, WhatsApp messages can be sent from Save and Resend when a mobile number is available.</small>
+                  </span>
+                </label>
+
+                <label class="whatsapp-toggle whatsapp-wide-field">
+                  <input id="whatsappSendOnSave" type="checkbox">
+                  <span>
+                    <strong>Send WhatsApp after Save</strong>
+                    <small>If enabled, a WhatsApp message is queued automatically after the weighment entry is saved.</small>
+                  </span>
+                </label>
+
+                <label class="communication-field whatsapp-wide-field">
+                  <span>WhatsApp Message Structure</span>
+                  <textarea id="whatsappTemplate" rows="12" spellcheck="false"></textarea>
+                </label>
+
+                <div class="whatsapp-test-box whatsapp-wide-field">
+                  <label class="communication-field">
+                    <span>Test Mobile Number</span>
+                    <input id="whatsappTestMobileNo" type="tel" autocomplete="off" placeholder="Enter WhatsApp mobile number">
+                  </label>
+                  <div class="communication-actions">
+                    <button type="button" id="testWhatsappConnectionBtn">Test Connection</button>
+                  </div>
+                  <p id="whatsappLastStatus">No WhatsApp test yet.</p>
+                </div>
+
+                <div class="whatsapp-placeholders whatsapp-wide-field">
+                  <h2>Available placeholders</h2>
+                  <p>{serialNo}, {entryDate}, {entryTime}, {vehicleNo}, {vehicleType}, {weighingType}, {material}, {customer}, {mobileNo}, {grossWeight}, {grossDate}, {grossTime}, {tareWeight}, {tareDate}, {tareTime}, {netWeight}, {charges}</p>
+                </div>
+
+                <div class="communication-actions whatsapp-wide-field">
+                  <button type="submit" class="primary">Save WhatsApp Settings</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/whatsapp_settings.js', v='20260724-1') }}"></script>
+{% endblock %}

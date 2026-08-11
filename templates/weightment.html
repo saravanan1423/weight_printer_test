@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Weightment Entry | Weighman WMS{% endblock %}
+
+{% block content %}
+        <section class="entry-card" id="entryCard">
+          <form id="weighmentForm" autocomplete="off">
+            <div class="weighman-board">
+              <aside class="compact-entry">
+                <div class="entry-title">
+                  <!-- <h1>Weighment Entry</h1> -->
+                  <!-- <h1>Vehicle Details</h1> -->
+                </div>
+
+                <div class="ticket-row" aria-label="Ticket info">
+                  <div class="float-field">
+                    <input id="serialNo" readonly disabled>
+                    <label for="serialNo">S.No</label>
+                  </div>
+                  <div class="float-field">
+                    <input id="refNo" readonly disabled>
+                    <label for="refNo">Ref No</label>
+                  </div>
+                  <div class="float-field">
+                    <input id="entryDate" type="date" readonly disabled>
+                    <label for="entryDate">Date</label>
+                  </div>
+                  <div class="float-field">
+                    <input id="entryTime" type="text" readonly disabled>
+                    <label for="entryTime">Time</label>
+                  </div>
+                </div>
+
+                <div class="weighment-stage" role="group" aria-label="Vehicle weighment stage">
+                  <button type="button" class="weighment-stage__option is-active" data-visit-stage="first" aria-pressed="true">
+                    <span class="weighment-stage__number">1</span>
+                    <span>First Weighment</span>
+                  </button>
+                  <button type="button" class="weighment-stage__option" data-visit-stage="second" aria-pressed="false" tabindex="-1">
+                    <span class="weighment-stage__number">2</span>
+                    <span>Second Weighment</span>
+                  </button>
+                </div>
+
+                <div class="vehicle-focus" {% if not weightment_field_settings.vehicleNo.enabled %}hidden{% endif %}>
+                  <div class="float-field">
+                    <input id="vehicleNo" maxlength="12" autocomplete="off" spellcheck="false" required data-field-label="{{ weightment_field_settings.vehicleNo.label }}">
+                    <label for="vehicleNo">{{ weightment_field_settings.vehicleNo.label }}<span class="custom-field-required-mark" aria-hidden="true">*</span></label>
+                    <span class="vehicle-type-badge" id="vehicleTypeBadge" aria-hidden="true" {% if not weightment_field_settings.vehicleType.enabled %}hidden{% endif %}></span>
+                    <div class="vehicle-filter" id="vehicleFilter" aria-label="Vehicle suggestions"></div>
+                  </div>
+                  <input id="vehicleType" class="vehicle-type-value" readonly aria-label="{{ weightment_field_settings.vehicleType.label }}" {% if not weightment_field_settings.vehicleType.enabled %}disabled data-config-disabled="true"{% endif %}>
+                  <p class="vehicle-status" id="vehicleStatus" hidden>Use 6 to 12 letters or numbers</p>
+                </div>
+
+                <div class="stacked-fields">
+                  <div class="float-field" {% if not weightment_field_settings.weighingType.enabled %}hidden{% endif %}>
+                    <select id="weighingType" autocomplete="off" required data-field-label="{{ weightment_field_settings.weighingType.label }}">
+                      <option value="" selected disabled>Select the weighing type</option>
+                      <option>Full load</option>
+                      <option>Empty</option>
+                      <!-- <option>Partial Load</option> -->
+                    </select>
+                    <label for="weighingType">{{ weightment_field_settings.weighingType.label }}<span class="custom-field-required-mark" aria-hidden="true">*</span></label>
+                  </div>
+                  <div class="float-field" {% if not weightment_field_settings.material.enabled %}hidden{% endif %}>
+                    <input id="material" autocomplete="off" spellcheck="false" {% if not weightment_field_settings.material.enabled %}disabled data-config-disabled="true"{% elif weightment_field_settings.material.required %}required data-built-in-required="true" data-field-label="{{ weightment_field_settings.material.label }}"{% endif %}>
+                    <label for="material">{{ weightment_field_settings.material.label }}{% if weightment_field_settings.material.required %}<span class="custom-field-required-mark" aria-hidden="true">*</span>{% endif %}</label>
+                    <div class="vehicle-filter" id="materialFilter" aria-label="Material suggestions"></div>
+                  </div>
+                  <div class="float-field" {% if not weightment_field_settings.customer.enabled %}hidden{% endif %}>
+                    <input id="customer" autocomplete="off" spellcheck="false" {% if not weightment_field_settings.customer.enabled %}disabled data-config-disabled="true"{% elif weightment_field_settings.customer.required %}required data-built-in-required="true" data-field-label="{{ weightment_field_settings.customer.label }}"{% endif %}>
+                    <label for="customer">{{ weightment_field_settings.customer.label }}{% if weightment_field_settings.customer.required %}<span class="custom-field-required-mark" aria-hidden="true">*</span>{% endif %}</label>
+                    <div class="vehicle-filter" id="customerFilter" aria-label="Customer suggestions"></div>
+                  </div>
+                  <div class="float-field" {% if not weightment_field_settings.mobileNo.enabled %}hidden{% endif %}>
+                    <input id="mobileNo" type="tel" autocomplete="off" spellcheck="false" {% if not weightment_field_settings.mobileNo.enabled %}disabled data-config-disabled="true"{% elif weightment_field_settings.mobileNo.required %}required data-built-in-required="true" data-field-label="{{ weightment_field_settings.mobileNo.label }}"{% endif %}>
+                    <label for="mobileNo">{{ weightment_field_settings.mobileNo.label }}{% if weightment_field_settings.mobileNo.required %}<span class="custom-field-required-mark" aria-hidden="true">*</span>{% endif %}</label>
+                    <div class="vehicle-filter" id="mobileFilter" aria-label="Mobile suggestions"></div>
+                  </div>
+                  <div class="float-field" {% if not weightment_field_settings.paymentMode.enabled %}hidden{% endif %}>
+                    <select id="paymentMode" autocomplete="off" {% if not weightment_field_settings.paymentMode.enabled %}disabled data-config-disabled="true"{% else %}required data-field-label="{{ weightment_field_settings.paymentMode.label }}"{% endif %}>
+                      <option selected>Cash</option>
+                      <option>UPI</option>
+                      <option>Credit</option>
+                      <!-- <option>Bank Transfer</option> -->
+                    </select>
+                    <label for="paymentMode">{{ weightment_field_settings.paymentMode.label }}<span class="custom-field-required-mark" aria-hidden="true">*</span></label>
+                  </div>
+                  <div class="field-row field-row--charges" id="chargeRow" {% if not weightment_field_settings.charges.enabled %}hidden style="display: none !important;" data-config-disabled="true"{% endif %}>
+                    <div class="float-field">
+                      <input id="charge1" type="number" min="0" autocomplete="off" {% if not weightment_field_settings.charges.enabled %}disabled data-config-disabled="true"{% elif weightment_field_settings.charges.required %}required data-built-in-required="true" data-field-label="{{ weightment_field_settings.charges.label }}"{% endif %}>
+                      <label for="charge1">{{ weightment_field_settings.charges.label }}{% if weightment_field_settings.charges.required %}<span class="custom-field-required-mark" aria-hidden="true">*</span>{% endif %}</label>
+                    </div>
+                    <input id="charge2" type="hidden" value="0">
+                  </div>
+                </div>
+
+                <div class="extra-fields">
+                  <div class="extra-fields-body">
+                    {% for column in custom_field_columns %}
+                    {% if column.enabled %}
+                    <div class="float-field">
+                      <input id="{{ column.input_id }}" name="{{ column.name }}" autocomplete="off"
+                        type="{% if column.field_type == 'numeric' %}number{% elif column.field_type == 'date' %}date{% else %}text{% endif %}"
+                        data-custom-field-type="{{ column.field_type }}"
+                        {% if column.calculation_left and column.calculation_right %}
+                        data-calculation-left="{{ column.calculation_left }}"
+                        data-calculation-right="{{ column.calculation_right }}"
+                        data-calculation-operator="{{ column.calculation_operator or 'add' }}"
+                        readonly
+                        {% endif %}
+                        {% if column.required %}required data-custom-required="true" data-field-label="{{ column.label }}"{% endif %}>
+                      <label for="{{ column.input_id }}">{{ column.label }}{% if column.required %}<span class="custom-field-required-mark" aria-hidden="true">*</span>{% endif %}</label>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+
+              </aside>
+
+              <section class="priority-stage{% if not weightment_field_settings.camera.enabled %} camera-disabled{% endif %}">
+                <div class="weight-top-row">
+                  <div class="live-weight hero-weight" data-live-weight-enabled="{{ 'true' if live_weight_enabled else 'false' }}" data-printer-type="{{ active_printer_type }}" data-printer-name="{{ default_printer_name }}" data-direct-print="{{ 'true' if direct_print_enabled else 'false' }}">
+                    <h2 id="liveWeightTitle">{{ 'Live Weight' if live_weight_enabled else 'Manual Weight' }}</h2>
+                    <div class="live-weight-value">
+                      <strong id="liveWeightValue">--</strong>
+                      <span>kg</span>
+                    </div>
+                  </div>
+
+                  <div class="weight-entry">
+                    <h2>Weight Entry</h2>
+                    <div class="weight-entry-grid">
+                      <div class="weight-entry-item has-meta">
+                        <label for="grossWeight">Gross Weight</label>
+                        <div class="weight-entry-value">
+                          <input id="grossWeight" type="number" min="0" value="" readonly>
+                          <strong id="grossWeightDisplay" class="weight-number">--</strong>
+                          <span class="weight-unit">kg</span>
+                        </div>
+                        <div class="weight-entry-meta">
+                          <div class="weight-info-field">
+                            <label for="grossEntryDate">Date</label>
+                            <input id="grossEntryDate" type="text" readonly>
+                          </div>
+                          <div class="weight-info-field">
+                            <label for="grossEntryTime">Time</label>
+                            <input id="grossEntryTime" type="text" readonly>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="weight-entry-item has-meta">
+                        <label for="tareWeight">Tare Weight</label>
+                        <div class="weight-entry-value">
+                          <input id="tareWeight" type="number" min="0" value="" readonly>
+                          <strong id="tareWeightDisplay" class="weight-number">--</strong>
+                          <span class="weight-unit">kg</span>
+                        </div>
+                        <div class="weight-entry-meta">
+                          <div class="weight-info-field">
+                            <label for="tareEntryDate">Date</label>
+                            <input id="tareEntryDate" type="text" readonly>
+                          </div>
+                          <div class="weight-info-field">
+                            <label for="tareEntryTime">Time</label>
+                            <input id="tareEntryTime" type="text" readonly>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="weight-entry-item net">
+                        <label for="netWeight">Net Weight</label>
+                        <div class="weight-entry-value">
+                          <input id="netWeight" type="number" readonly>
+                          <strong id="netWeightDisplay" class="weight-number">--</strong>
+                          <span class="weight-unit">kg</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="camera-duo" id="cameraDuo" aria-label="{{ weightment_field_settings.camera.label }} views" {% if not weightment_field_settings.camera.enabled %}hidden{% endif %}>
+                  <div class="camera-empty-state">No connected cameras. Add and test cameras in Settings &gt; Camera Setting.</div>
+                </div>
+
+                <!-- <div class="weight-entry weight-entry-space" aria-label="Weight entry space"></div> -->
+              </section>
+            </div>
+            <div class="actions">
+              <button type="button" id="newBtn">
+                <svg class="action-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+                <span>New</span>
+              </button>
+              <button type="submit" class="primary">
+                <svg class="action-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h12l2 2v14H5z"></path><path d="M8 4v6h8V4M8 20v-6h8v6"></path></svg>
+                <span class="save-button-label">Save</span>
+              </button>
+              <button type="button" id="printBtn">
+                <svg class="action-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><path d="M6 14h12v7H6z"></path></svg>
+                <span>Print</span>
+              </button>
+              <button type="button" id="prevBtn">
+                <svg class="action-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+                <span>Prev</span>
+              </button>
+              <button type="button" id="nextBtn">
+                <svg class="action-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+                <span>Next</span>
+              </button>
+              <button type="button" id="searchBtn">
+                <svg class="action-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M16 16l4 4"></path></svg>
+                <span>Search</span>
+              </button>
+              {% if resend_button_enabled %}<button type="button" id="resendBtn">
+                <svg class="action-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"></path><path d="M19 12a7 7 0 1 0-2.1 5"></path></svg>
+                <span>Resend</span>
+              </button>{% endif %}
+            </div>
+          </form>
+
+          <div class="previous-weighment-modal" id="previousWeighmentModal" aria-hidden="true">
+            <div class="previous-weighment-modal__dialog" role="dialog" aria-modal="false" aria-label="Previous weighment records">
+              <div class="previous-weighment-table-wrap">
+                <table class="previous-weighment-table">
+                  <thead>
+                    <tr>
+                      <th>S.No</th>
+                      <th>Date</th>
+                      <th>Time</th>
+                      <th>Weighment</th>
+                      <th>Charges</th>
+                      <th>
+                        <span class="previous-weighment-table__charges-heading">
+                          <span>Weight</span>
+                          <button type="button" class="previous-weighment-modal__close" id="previousWeighmentClose" aria-label="Close">&times;</button>
+                        </span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody id="previousWeighmentRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/weightment.css', v='20260719-1') }}">
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/weightment.js', v='20260724-1') }}"></script>
+{% endblock %}

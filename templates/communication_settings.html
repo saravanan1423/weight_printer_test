@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Communication Setting | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/communication_settings.css') }}?v=20260711-3">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card communication-card">
+          <div class="communication-shell">
+            <div class="communication-topbar">
+              <div>
+                <h1>Communication Setting</h1>
+                <p>Choose the COM port, save it, then pick Start/End and From/To from the continuous live data.</p>
+              </div>
+              <span class="connection-status" id="connectionStatus">Idle</span>
+            </div>
+
+            <form class="communication-form" id="communicationForm">
+              <section class="communication-panel communication-port-panel">
+                <div class="section-title">
+                  <h2>Port Setting</h2>
+                  <span>Serial</span>
+                </div>
+
+                <div class="communication-grid communication-grid--ports">
+                  <label class="communication-field">
+                    <span>Com Port</span>
+                    <select id="comPort" name="comPort">
+                      <option value="">Select COM Port</option>
+                    </select>
+                    <small id="comPortHint">Available COM ports will appear here.</small>
+                  </label>
+
+                  <label class="communication-field">
+                    <span>Baudrate</span>
+                    <select id="baudrate" name="baudrate">
+                      <option>1200</option>
+                      <option>2400</option>
+                      <option>4800</option>
+                      <option>9600</option>
+                      <option>19200</option>
+                      <option>38400</option>
+                      <option>57600</option>
+                      <option>115200</option>
+                    </select>
+                  </label>
+
+                  <label class="communication-field">
+                    <span>Data Bit</span>
+                    <select id="byteSize" name="byteSize">
+                      <option>8</option>
+                      <option>7</option>
+                      <option>6</option>
+                      <option>5</option>
+                    </select>
+                  </label>
+
+                  <label class="communication-field">
+                    <span>Stop Bit</span>
+                    <select id="stopBit" name="stopBit">
+                      <option>1</option>
+                      <option>1.5</option>
+                      <option>2</option>
+                    </select>
+                  </label>
+
+                  <label class="communication-field">
+                    <span>Parity</span>
+                    <select id="parity" name="parity">
+                      <option>None</option>
+                      <option>Even</option>
+                      <option>Odd</option>
+                    </select>
+                  </label>
+
+                  <label class="communication-field">
+                    <span>Timeout</span>
+                    <input id="timeout" name="timeout" type="number" min="0" value="">
+                    <small>Milliseconds</small>
+                  </label>
+                </div>
+
+                <div class="communication-actions">
+                  <button type="button" id="testConnectionBtn">Test Connection</button>
+                  <button type="submit" class="primary">Save</button>
+                </div>
+              </section>
+
+              <section class="communication-panel communication-raw-panel">
+                <div class="section-title">
+                  <h2>Live Raw / Address Picker</h2>
+                  <span id="previewStatus">Waiting</span>
+                </div>
+
+                <div class="ascii-box-grid" id="asciiBoxGrid" aria-label="ASCII character selector"></div>
+
+                <div class="selected-ascii-card" id="selectedAsciiCard">
+                  <span>Selected Range</span>
+                  <strong>--</strong>
+                  <small>Active icon: First ASCII. Click a live box to assign it.</small>
+                  <div class="selected-ascii-actions">
+                    <button type="button" class="picker-mode active" data-picker-mode="startAscii" title="First ASCII">⟦ First ASCII</button>
+                    <button type="button" class="picker-mode" data-picker-mode="endAscii" title="Last ASCII">Last ASCII ⟧</button>
+                    <button type="button" class="picker-mode" data-picker-mode="fromPosition" title="Start Position">⌖ Start Pos</button>
+                    <button type="button" class="picker-mode" data-picker-mode="toPosition" title="End Position">End Pos ⌕</button>
+                    <button type="button" id="clearAsciiSelectionBtn">Clear</button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="communication-panel communication-rule-panel">
+                <div class="section-title">
+                  <h2>Simple Rules</h2>
+                  <span>Parser</span>
+                </div>
+
+                <div class="communication-grid communication-grid--rules">
+                  <label class="communication-field">
+                    <span>Start ASCII Value</span>
+                    <input id="startCharacter" name="startCharacter" type="number" min="0" max="127" value="" placeholder="Example: 91">
+                    <small id="startCharacterAscii">Character --</small>
+                  </label>
+
+                  <label class="communication-field">
+                    <span>End ASCII Value</span>
+                    <input id="endCharacter" name="endCharacter" type="number" min="0" max="127" value="" placeholder="Example: 93">
+                    <small id="endCharacterAscii">Character --</small>
+                  </label>
+
+                  <label class="communication-field">
+                    <span>From Position</span>
+                    <input id="startAddress" name="startAddress" type="number" min="0" value="0">
+                    <small>Counted after Start/End character cut</small>
+                  </label>
+
+                  <label class="communication-field">
+                    <span>To Position</span>
+                    <input id="endAddress" name="endAddress" type="number" min="0" value="0">
+                    <small>Counted after Start/End character cut</small>
+                  </label>
+
+                  <label class="toggle-field">
+                    <input id="reverseWeight" name="reverseWeight" type="checkbox">
+                    <span>
+                      <strong>Reverse Weight</strong>
+                      <small>Reverse the selected value before showing weight.</small>
+                    </span>
+                  </label>
+
+                  <div class="parser-summary" id="communicationPreviewMeta">
+                    Live data will preview here after Start/End and From/To are selected.
+                  </div>
+                </div>
+              </section>
+
+              <section class="communication-panel communication-preview-panel">
+                <div class="section-title">
+                  <h2>Preview</h2>
+                  <span>Live</span>
+                </div>
+                <div class="live-weight-card">
+                  <div class="live-weight-card__label">
+                    <span>Live Weight</span>
+                    <small id="liveConnectionState">Waiting for scale data</small>
+                  </div>
+                  <strong class="live-data-value" id="liveValue">--</strong>
+                  <p class="live-weight-card__hint">Reading continuously from the saved COM port.</p>
+                </div>
+                <div class="preview-value-card">
+                  <span>Test Preview</span>
+                  <strong id="communicationPreviewValue">--</strong>
+                </div>
+              </section>
+            </form>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/communication_settings.js') }}?v=20260711-3"></script>
+{% endblock %}

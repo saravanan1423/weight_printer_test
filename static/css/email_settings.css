@@ -1,0 +1,53 @@
+.email-settings-layout {
+  grid-template-columns: minmax(300px, .68fr) minmax(0, 1fr);
+}
+
+.email-entry-panel {
+  gap: 16px;
+}
+
+.email-wide-field {
+  grid-column: 1 / -1;
+}
+
+.email-instructions {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 14px;
+  overflow: auto;
+}
+
+.email-instructions h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.email-instructions ol {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 22px;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.email-form input[readonly],
+.email-form select:disabled {
+  background: #f3f4f6;
+  color: #4b5563;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .email-wide-field {
+    grid-column: auto;
+  }
+}

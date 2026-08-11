@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Custom Field Setting | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom_field_settings.css', v='20260719-1') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card custom-field-card">
+          <div class="custom-field-layout">
+            <section class="custom-field-panel custom-field-entry-panel">
+              <div class="custom-field-head">
+                <div>
+                  <h1>{% if request.args.get('scope') == 'master' %}Master Field Setting{% else %}Custom Field Setting{% endif %}</h1>
+                  <p>{% if request.args.get('scope') == 'master' %}Control the fields shown in Master forms.{% else %}Add up to 5 fields and control how they appear on weighment.{% endif %}</p>
+                </div>
+                <span class="entry-mode" id="customFieldEntryMode">Add</span>
+              </div>
+
+              {% if request.args.get('scope') == 'master' %}
+              <nav class="master-field-tabs" aria-label="Master field groups">
+                <a class="{% if request.args.get('section') == 'vehicle_number' %}active{% endif %}" href="{{ url_for('settings.custom_field', scope='master', section='vehicle_number') }}">Vehicle Number</a>
+                <a class="{% if request.args.get('section') == 'vehicle_type' %}active{% endif %}" href="{{ url_for('settings.custom_field', scope='master', section='vehicle_type') }}">Vehicle Type</a>
+                <a class="{% if request.args.get('section') == 'material' %}active{% endif %}" href="{{ url_for('settings.custom_field', scope='master', section='material') }}">Material</a>
+                <a class="{% if request.args.get('section') == 'customer' %}active{% endif %}" href="{{ url_for('settings.custom_field', scope='master', section='customer') }}">Customer</a>
+              </nav>
+              {% endif %}
+
+              <form class="custom-field-form" id="customFieldForm">
+                <label class="custom-field-input-wrap">
+                  <span>Field Name</span>
+                  <input id="customFieldInput" name="customFieldName" placeholder="Enter field name" autocomplete="off" maxlength="40" required>
+                </label>
+
+                <label class="custom-field-input-wrap" id="customFieldTypeWrap">
+                  <span>Field Type</span>
+                  <select id="customFieldType">
+                    <option value="text">Text</option>
+                    <option value="numeric">Numeric</option>
+                    <option value="date">Date</option>
+                  </select>
+                </label>
+
+                <div class="custom-field-calculation" id="customFieldCalculation" hidden>
+                  <div class="custom-field-head custom-field-head--compact">
+                    <div>
+                      <h2>Numeric Calculation</h2>
+                      <p>Optional: choose two numeric fields. This field will show Field 1 + Field 2.</p>
+                    </div>
+                  </div>
+                  <div class="custom-field-calculation-grid">
+                    <label class="custom-field-input-wrap">
+                      <span>Field 1</span>
+                      <select id="customFieldCalcLeft"></select>
+                    </label>
+                    <label class="custom-field-input-wrap">
+                      <span>Operation</span>
+                      <select id="customFieldCalcOperator">
+                        <option value="add">+</option>
+                        <option value="subtract">-</option>
+                        <option value="multiply">*</option>
+                        <option value="divide">/</option>
+                      </select>
+                    </label>
+                    <label class="custom-field-input-wrap">
+                      <span>Field 2</span>
+                      <select id="customFieldCalcRight"></select>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="custom-field-options">
+                  <label class="custom-field-option">
+                    <input id="customFieldEnabled" type="checkbox" checked>
+                    <span>Enabled</span>
+                  </label>
+                  <label class="custom-field-option">
+                    <input id="customFieldRequired" type="checkbox">
+                    <span>Required</span>
+                  </label>
+                </div>
+
+                <div class="custom-field-actions">
+                  <button type="submit" class="primary" id="addCustomFieldButton">Add</button>
+                  <button type="button" id="editCustomFieldButton">Save</button>
+                  <button type="button" class="danger" id="deleteCustomFieldButton">Delete</button>
+                </div>
+              </form>
+
+              <div class="custom-field-limit-card" id="customFieldLimitCard">
+                <strong id="customFieldCount">0 / 5</strong>
+                <span>Maximum 5 custom fields allowed</span>
+              </div>
+            </section>
+
+            <section class="custom-field-panel">
+              <div class="custom-field-head">
+                <div>
+                  <h1>Added Fields</h1>
+                  <p>Select a row to edit or delete it.</p>
+                </div>
+              </div>
+
+              <div class="custom-field-table-wrap">
+                <table class="custom-field-table">
+                  <thead>
+                    <tr>
+                      <th>S.No</th>
+                      <th>Field Name</th>
+                      <th>Type</th>
+                      <th>Calculation</th>
+                      <th>Enabled</th>
+                      <th>Required</th>
+                    </tr>
+                  </thead>
+                  <tbody id="customFieldTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/custom_field_settings.js', v='20260719-2') }}"></script>
+{% endblock %}

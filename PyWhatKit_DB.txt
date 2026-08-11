@@ -1,0 +1,15 @@
+Date: 24/7/2026
+Time: 22:29
+Phone Number: +919944891819
+Message: Weighman WMS TicketS.No: TESTDate: 24-07-2026 10:00 PMVehicle No: TEST1234Material: Test MaterialGross Weight: 1000 kgTare Weight: 500 kgNet Weight: 500 kgCharges: 0
+--------------------
+Date: 24/7/2026
+Time: 22:30
+Phone Number: +919994645560
+Message: Weighman WMS TicketS.No: TESTDate: 24-07-2026 10:00 PMVehicle No: TEST1234Material: Test MaterialGross Weight: 1000 kgTare Weight: 500 kgNet Weight: 500 kgCharges: 0
+--------------------
+Date: 24/7/2026
+Time: 22:31
+Phone Number: +919944891819
+Message: Weighman WMS TicketS.No: TESTDate: 24-07-2026 10:00 PMVehicle No: TEST1234Material: Test MaterialGross Weight: 1000 kgTare Weight: 500 kgNet Weight: 500 kgCharges: 0
+--------------------

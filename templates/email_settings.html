@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Email Settings | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/communication_settings.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/email_settings.css') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card communication-card email-settings-card">
+          <div class="communication-layout email-settings-layout">
+            <section class="communication-panel error-log-panel">
+              <div class="communication-head">
+                <div>
+                  <h1>Email Error Log</h1>
+                </div>
+                <span class="connection-status" id="emailConnectionStatus">Idle</span>
+              </div>
+
+              <div class="log-filter-row">
+                <label>
+                  <span>Start Date</span>
+                  <input id="emailLogStartDate" type="date">
+                </label>
+                <label>
+                  <span>End Date</span>
+                  <input id="emailLogEndDate" type="date">
+                </label>
+              </div>
+
+              <div class="error-log-list" id="emailLog"></div>
+            </section>
+
+            <section class="communication-panel communication-entry-panel email-entry-panel">
+              <div class="communication-head">
+                <div>
+                  <h1>Email Settings</h1>
+                </div>
+                <span class="entry-mode" id="emailSavedState">Not Saved</span>
+              </div>
+
+              <form class="communication-form email-form" id="emailForm">
+                <label class="communication-field">
+                  <span>SMTP Host</span>
+                  <input id="smtpHost" name="smtpHost" autocomplete="off" value="smtp.gmail.com" readonly>
+                </label>
+
+                <label class="communication-field">
+                  <span>SMTP Port</span>
+                  <input id="smtpPort" name="smtpPort" type="number" min="1" max="65535" value="587" readonly>
+                </label>
+
+                <label class="communication-field">
+                  <span>Security</span>
+                  <select id="smtpSecurity" name="smtpSecurity" disabled>
+                    <option>TLS</option>
+                    <option>SSL</option>
+                    <option>None</option>
+                  </select>
+                </label>
+
+                <label class="communication-field">
+                  <span>Sender Email</span>
+                  <input id="senderEmail" name="senderEmail" type="email" autocomplete="off" placeholder="sender@example.com">
+                </label>
+
+                <label class="communication-field">
+                  <span>Username</span>
+                  <input id="emailUsername" name="emailUsername" autocomplete="off" placeholder="SMTP username">
+                </label>
+
+                <label class="communication-field">
+                  <span>Password / App Password</span>
+                  <input id="emailPassword" name="emailPassword" type="password" autocomplete="new-password">
+                </label>
+
+                <label class="communication-field email-wide-field">
+                  <span>Recipient</span>
+                  <input id="recipient" name="recipient" type="email" autocomplete="off" placeholder="recipient@example.com">
+                </label>
+
+                <div class="communication-actions">
+                  <button type="submit" class="primary">Save Connection</button>
+                  <button type="button" id="sendInstructionEmailBtn">Send Instruction Email</button>
+                </div>
+              </form>
+
+              <div class="email-instructions">
+                <h2>Configuration Instructions</h2>
+                <ol>
+                  <li>Sign in to the Google account used as the sender email.</li>
+                  <li>Open Google Account &gt; Security and enable 2-Step Verification.</li>
+                  <li>Open App passwords from the Security page.</li>
+                  <li>Create a new app password for Mail. Use Weighman WMS as the app or device name if Google asks for one.</li>
+                  <li>Copy the generated 16-character app password.</li>
+                  <li>Enter the Sender Email and use the same full email address as the Username.</li>
+                  <li>Paste the app password into Password / App Password.</li>
+                  <li>Enter the Recipient email address.</li>
+                  <li>Click Save Connection, then Send Instruction Email to verify delivery.</li>
+                </ol>
+              </div>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/email_settings.js') }}"></script>
+{% endblock %}

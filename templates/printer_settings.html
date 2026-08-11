@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Printer Setting | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/printer_layout.css', v='20260802-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/printer_settings.css', v='20260718-1') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card printer-editor-card" id="entryCard">
+          <div class="printer-editor-layout">
+            <aside class="printer-sidebar">
+              <div class="printer-sidebar-head">
+                <div>
+                  <h1>Printer Setting</h1>
+                  <p>Choose the printer format first, load its template, then drag blocks on the ticket and save customer-wise layouts.</p>
+                </div>
+                <span class="entry-mode">Layout Editor</span>
+              </div>
+
+              <section class="printer-sidebar-section">
+                <div class="printer-sidebar-section__head">
+                  <h2>Printer &amp; Templates</h2>
+                  <p>Pick the printer first, then choose the template that should come into the editor.</p>
+                </div>
+                <div class="printer-setup-stack">
+                  <div>
+                    <span class="printer-section-label">Printer Type</span>
+                    <div id="printerTypeList" class="printer-type-list"></div>
+                  </div>
+                  <div class="printer-template-meta">
+                    <strong id="printerTemplateStatus">Loading template…</strong>
+                    <span id="printerTemplateHint">Choose a printer type to load its starter template and customer layouts.</span>
+                  </div>
+                  <div>
+                    <span class="printer-section-label">Templates</span>
+                    <div id="printerTemplateGrid" class="printer-template-grid"></div>
+                  </div>
+                  <div class="printer-template-create">
+                    <button type="button" id="createPrinterTemplate" class="primary">Create Template</button>
+                  </div>
+                </div>
+              </section>
+
+              <div class="printer-footer-actions">
+                <button type="button" id="resetPrinterLayout">Reset Changes</button>
+                <button type="button" id="openPrinterPreview">Print</button>
+                <button type="button" id="deletePrinterTemplate" class="danger">Delete Template</button>
+                <button type="button" class="primary" id="savePrinterLayout">Save Template</button>
+              </div>
+            </aside>
+
+            <section class="printer-canvas-panel">
+              <div class="printer-canvas-head printer-canvas-head--compact">
+                <div class="printer-view-mode-tabs" id="printerViewModeTabs" role="tablist">
+                  <button type="button" class="printer-view-tab is-active" id="tabVisualEditor" data-view-mode="visual">🎨 Visual Editor</button>
+                  <button type="button" class="printer-view-tab" id="tabDotMatrixRaw" data-view-mode="raw">🖨️ Dot Matrix RAW Studio (40 Lines)</button>
+                </div>
+                <div class="printer-canvas-head__actions">
+                  <button type="button" class="printer-fullscreen-preview" id="previewPrinterFullscreen">Print</button>
+                  <button type="button" class="printer-fullscreen-toggle" id="togglePrinterFullscreen" aria-label="Open full-screen layout editor" title="Full screen">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M8 3H3v5"></path><path d="m3 3 6 6"></path>
+                      <path d="M16 3h5v5"></path><path d="m21 3-6 6"></path>
+                      <path d="M8 21H3v-5"></path><path d="m3 21 6-6"></path>
+                      <path d="M16 21h5v-5"></path><path d="m21 21-6-6"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Visual Canvas Editor View -->
+              <div class="printer-sheet-stage" id="printerSheetStage">
+                <div id="printerLayoutPreview" class="printer-sheet printer-sheet--editor"></div>
+              </div>
+
+              <!-- Dot Matrix RAW Line-by-Line Studio View -->
+              <div class="dot-matrix-raw-stage is-hidden" id="dotMatrixRawStage">
+                <div class="raw-studio-card">
+                  <div class="raw-studio-header">
+                    <h3>🖨️ Dot Matrix Hardware &amp; Line-by-Line Direct RAW Print Controls</h3>
+                    <div class="raw-lines-badge" id="rawLinesBadge">Total Feed: 40 lines (6.7 in)</div>
+                  </div>
+
+                  <div class="raw-controls-grid">
+                    <label class="printer-field">
+                      <span>Dot Matrix Printer</span>
+                      <select id="rawPrinterSelect"></select>
+                    </label>
+                    <label class="printer-field">
+                      <span>Line Width (Cols)</span>
+                      <input id="rawLineWidth" type="number" min="40" max="136" value="80">
+                    </label>
+                    <label class="printer-field raw-field-span-2">
+                      <span>Printer Stop Mode</span>
+                      <select id="rawFeedMode">
+                        <option value="auto_40" selected>Auto-Pad to 40 Lines (19 Content + 21 Blank Lines - Default)</option>
+                        <option value="stop_0">Stop Immediately After Last Line (0 Extra Lines)</option>
+                        <option value="auto_36">Auto-Pad to 36 Lines (6-Inch Perforation)</option>
+                        <option value="custom">Feed Custom Extra Blank Lines</option>
+                      </select>
+                    </label>
+                    <label class="printer-field" id="rawExtraLinesField" style="display: none;">
+                      <span>Extra Blank Lines</span>
+                      <input id="rawExtraLines" type="number" min="0" max="30" value="2">
+                    </label>
+                  </div>
+
+                  <div class="raw-checkboxes-row">
+                    <label class="raw-checkbox-item">
+                      <input type="checkbox" id="rawSet6Inch" checked>
+                      <span>ESC C 0 6 (Set 6-Inch Page Length)</span>
+                    </label>
+                    <label class="raw-checkbox-item">
+                      <input type="checkbox" id="rawSendFf">
+                      <span>Send Form Feed (FF \x0C) at End</span>
+                    </label>
+                  </div>
+
+                  <div class="raw-actions-row">
+                    <button type="button" class="btn btn-secondary" id="rawRefreshBtn">⚡ 1. Preview &amp; Refresh Lines</button>
+                    <button type="button" class="btn btn-primary" id="rawDirectPrintBtn">🖨️ 2. Direct RAW Line Print</button>
+                    <button type="button" class="btn btn-secondary" id="rawAdvancePaperBtn">📄 3. Advance to Perforation</button>
+                  </div>
+                </div>
+
+                <div class="raw-preview-box">
+                  <div class="raw-preview-box-head">
+                    <span>Live Dot Matrix Slip Preview (Exact Line-by-Line Numbering)</span>
+                    <span id="rawContentCountMeta">19 Content Lines | 21 Blank Lines</span>
+                  </div>
+                  <pre class="raw-preview-console" id="rawPreviewConsole"></pre>
+                </div>
+              </div>
+            </section>
+
+            <aside class="printer-inspector-panel">
+              <div class="printer-inspector-panel__head">
+                <h2 id="printerInspectorTitle">Layout Settings</h2>
+                <p id="printerInspectorDescription">Adjust page size, row groups, and add new content when nothing is selected.</p>
+              </div>
+              <div class="printer-inspector-panel__body">
+                <div id="printerInspectorDefaultMode" class="printer-inspector-mode">
+                  <section class="printer-sidebar-section">
+                    <div class="printer-sidebar-section__head">
+                      <h2>Page Size</h2>
+                      <p>The size range below changes based on the printer type you choose.</p>
+                    </div>
+                    <div class="printer-field-grid printer-field-grid--two">
+                      <label class="printer-field">
+                        <span>Width (mm)</span>
+                        <input id="pageWidthMm" type="number" min="55" max="320" step="0.1">
+                      </label>
+                      <label class="printer-field">
+                        <span>Height (mm)</span>
+                        <input id="pageHeightMm" type="number" min="90" max="260" step="0.1">
+                      </label>
+                      <label class="printer-field">
+                        <span>Orientation</span>
+                        <select id="pageOrientation">
+                          <option value="landscape">Landscape</option>
+                          <option value="portrait">Portrait</option>
+                        </select>
+                      </label>
+                      <label class="printer-field">
+                        <span>Page Background</span>
+                        <input id="pageBackgroundColor" type="color">
+                      </label>
+                      <label class="printer-field">
+                        <span>Print Border</span>
+                        <input id="pageBorderColor" type="color">
+                      </label>
+                      <label class="printer-field">
+                        <span>Border Width</span>
+                        <input id="pageBorderWidth" type="number" min="0" max="6" step="1">
+                      </label>
+                      <label class="printer-field" id="dotMatrixFontFamilyField" hidden>
+                        <span>Font Family</span>
+                        <select id="dotMatrixFontFamily"></select>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="printer-sidebar-section">
+                    <div class="printer-sidebar-section__head">
+                      <h2>Field Rows</h2>
+                      <p>Add or delete rows. Inside each row, type any field name and choose the ticket value from the dropdown.</p>
+                    </div>
+                    <div id="printerFieldRowsManager" class="printer-field-rows-manager"></div>
+                    <div class="printer-list-actions">
+                      <button type="button" id="addPrinterFieldRow">Add Row</button>
+                    </div>
+                  </section>
+
+                  <section class="printer-sidebar-section">
+                    <div class="printer-sidebar-section__head">
+                      <h2>Add Content</h2>
+                      <p>Drag a block onto the page, or click it to add one quickly.</p>
+                    </div>
+                    <div class="printer-field-grid printer-field-grid--two printer-add-config">
+                      <label class="printer-field">
+                        <span>Field / Weight Source</span>
+                        <select id="quickAddFieldSource"></select>
+                      </label>
+                      <label class="printer-field">
+                        <span>Photo Source</span>
+                        <select id="quickAddPhotoSource"></select>
+                      </label>
+                    </div>
+                    <div class="printer-action-grid">
+                      <button type="button" class="printer-add-tile" data-add-kind="field" draggable="true">
+                        <strong>Field</strong>
+                        <span>Ticket value pair</span>
+                      </button>
+                      <button type="button" class="printer-add-tile" data-add-kind="weight" draggable="true">
+                        <strong>Weight Box</strong>
+                        <span>Large weight reading</span>
+                      </button>
+                      <button type="button" class="printer-add-tile" data-add-kind="staticText" draggable="true">
+                        <strong>Text</strong>
+                        <span>Static label or note</span>
+                      </button>
+                      <button type="button" class="printer-add-tile" data-add-kind="printBreak" draggable="true">
+                        <strong>Print Break</strong>
+                        <span>Stop dot matrix print here</span>
+                      </button>
+                      <button type="button" class="printer-add-tile" data-add-kind="photo" draggable="true">
+                        <strong>Photo</strong>
+                        <span>Camera image block</span>
+                      </button>
+                      <button type="button" class="printer-add-tile" data-add-kind="image" draggable="true">
+                        <strong>Logo / Image</strong>
+                        <span>Uploaded branding image</span>
+                      </button>
+                    </div>
+                  </section>
+                </div>
+
+                <div id="printerInspectorElementMode" class="printer-inspector-mode is-hidden">
+                  <div class="printer-list-actions printer-inspector-actions">
+                    <button type="button" id="clearPrinterSelection">Clear Selection</button>
+                    <button type="button" id="duplicatePrinterElement">Duplicate</button>
+                    <button type="button" class="primary" data-save-layout>Save</button>
+                    <button type="button" id="deletePrinterElement" class="danger">Delete</button>
+                  </div>
+                  <div id="printerElementInspector" class="printer-element-inspector"></div>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <input id="printerImageUpload" type="file" accept=".png,.jpg,.jpeg,.webp" hidden>
+
+          <div class="printer-modal" id="printerCreateTemplateModal" aria-hidden="true">
+            <div class="printer-modal-panel" role="dialog" aria-modal="true" aria-labelledby="printerCreateTemplateTitle">
+              <div class="printer-modal-head">
+                <div>
+                  <span id="printerCreateTemplateType">Printer Template</span>
+                  <h2 id="printerCreateTemplateTitle">Create Template</h2>
+                </div>
+                <button class="printer-modal-close" id="closePrinterCreateTemplate" type="button" aria-label="Close create template dialog">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+              </div>
+
+              <div class="printer-modal-body">
+                <p id="printerCreateTemplateHelp" class="printer-modal-help">
+                  Choose which saved template to copy. Default templates stay unchanged.
+                </p>
+                <div class="printer-field-grid">
+                  <label class="printer-field">
+                    <span>Copy From</span>
+                    <select id="printerTemplateSource"></select>
+                  </label>
+                  <label class="printer-field">
+                    <span>New Template Name</span>
+                    <input id="printerCreateTemplateName" autocomplete="off" placeholder="Customer layout">
+                  </label>
+                </div>
+              </div>
+
+              <div class="printer-modal-actions">
+                <button type="button" id="cancelPrinterCreateTemplate">Cancel</button>
+                <button type="button" class="primary" id="confirmPrinterCreateTemplate">Create Template</button>
+              </div>
+            </div>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/printer_renderer.js', v='20260802-2') }}"></script>
+  <script src="{{ url_for('static', filename='js/printer_settings.js', v='20260802-1') }}"></script>
+{% endblock %}

@@ -1,0 +1,624 @@
+.printer-sheet-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(36, 55, 140, 0.06), rgba(15, 23, 42, 0.02)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(148, 163, 184, 0.08),
+      rgba(148, 163, 184, 0.08) 1px,
+      transparent 1px,
+      transparent 20px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(148, 163, 184, 0.08),
+      rgba(148, 163, 184, 0.08) 1px,
+      transparent 1px,
+      transparent 20px
+    ),
+    #eef4fb;
+  padding: 20px;
+}
+
+.printer-sheet {
+  --sheet-ratio: 297 / 210;
+  --sheet-width-mm: 297mm;
+  --sheet-height-mm: 210mm;
+  position: relative;
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  aspect-ratio: var(--sheet-ratio);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 28px 68px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.printer-sheet--editor {
+  width: min(100%, 1120px, calc(var(--sheet-width-mm) * 3.7795275591));
+  height: min(100%, calc(var(--sheet-height-mm) * 3.7795275591));
+  aspect-ratio: auto;
+}
+
+.printer-sheet--print {
+  width: var(--sheet-width-mm);
+  height: var(--sheet-height-mm);
+  aspect-ratio: auto;
+  max-width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.printer-page {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 0;
+  font-family: "Segoe UI", "Open Sans", sans-serif;
+}
+
+.printer-page::before {
+  content: "";
+  position: absolute;
+  inset: var(--printer-page-safe-margin, 0mm);
+  border: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.printer-page__guide {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 20px);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #475569;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.printer-page__guide strong {
+  color: #0f172a;
+}
+
+.printer-sheet.is-drop-target .printer-page::before {
+  border: 0;
+  box-shadow: none;
+}
+
+.printer-sheet.is-drop-target .printer-page__guide {
+  background: rgba(236, 253, 245, 0.95);
+  color: #047857;
+}
+
+.printer-managed-rows {
+  position: absolute;
+  box-sizing: border-box;
+  display: grid;
+  grid-auto-rows: 1fr;
+  overflow: hidden;
+  border: 0;
+  color: var(--printer-accent-color, #24378C);
+  background: transparent;
+}
+
+.printer-managed-row {
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.printer-managed-row + .printer-managed-row {
+  border-top: 0;
+}
+
+.printer-managed-field,
+.printer-managed-row__placeholder {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 2px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.1;
+  overflow: hidden;
+}
+
+.printer-managed-field {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  column-gap: 2px;
+}
+
+.printer-managed-field > * {
+  min-width: 0;
+}
+
+.printer-managed-field + .printer-managed-field {
+  border-left: 0;
+}
+
+.printer-managed-field__label {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.printer-managed-field__value {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.printer-managed-row__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.printer-page--thermal .printer-managed-rows {
+  border: 0;
+  overflow: visible;
+  color: #000000;
+  font-family: "Courier New", Courier, monospace;
+}
+
+.printer-page--thermal {
+  font-family: "Courier New", Courier, monospace;
+  color: #000000;
+  --thermal-detail-gap: 5px;
+  --thermal-row-padding-top: 1px;
+  --thermal-row-padding-bottom: 4px;
+  --thermal-separator-offset: 0;
+  --thermal-separator-side-gap: 12px;
+}
+
+.printer-page--thermal .printer-managed-row {
+  align-items: center;
+  cursor: grab;
+  position: relative;
+  padding: var(--thermal-row-padding-top) 0 var(--thermal-row-padding-bottom);
+}
+
+.printer-page--thermal .printer-managed-row + .printer-managed-row {
+  margin-top: var(--thermal-detail-gap);
+}
+
+.printer-page--thermal .printer-managed-row--draggable:active {
+  cursor: grabbing;
+}
+
+.printer-page--thermal .printer-managed-row--thermal-details-end::after,
+.printer-page--thermal .printer-managed-row--thermal-final::after {
+  content: "";
+  position: absolute;
+  left: var(--thermal-separator-side-gap);
+  right: var(--thermal-separator-side-gap);
+  bottom: var(--thermal-separator-offset);
+  border-bottom: 1px dotted currentColor;
+  opacity: 0.55;
+}
+
+.printer-page--interactive .printer-element[data-element-id="thermal-address-line-2"]::after,
+.printer-page--interactive .printer-managed-row--thermal-details-end::after,
+.printer-page--interactive .printer-managed-row--thermal-final::after {
+  content: none;
+}
+
+.printer-page--thermal .printer-managed-field,
+.printer-page--thermal .printer-managed-row__placeholder {
+  padding: 1px 2px;
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.printer-page--thermal .printer-managed-field {
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 2px;
+}
+
+.printer-page--thermal .printer-managed-field + .printer-managed-field {
+  border-left: 0;
+}
+
+.printer-page--thermal .printer-managed-field__label,
+.printer-page--thermal .printer-managed-field__value {
+  white-space: nowrap;
+  font-weight: 400;
+  text-overflow: clip;
+  overflow: hidden;
+}
+
+.printer-page--thermal .printer-managed-field__label {
+  flex-shrink: 0;
+}
+
+.printer-page--thermal .printer-managed-field__value {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+@font-face {
+  font-family: "RalewayDotsPreview";
+  src: url("/static/fonts/RalewayDots-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "DotMatrixUploaded";
+  src:
+    url("/static/fonts/dotmatrix.regular.ttf") format("truetype"),
+    url("/static/fonts/dotmatrix.regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "FS Blok";
+  src: url("/static/fonts/fs-blok/fs_blok.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.printer-page--dot-matrix .printer-managed-rows {
+  border: 0;
+  overflow: visible;
+  color: #000000;
+  font-family: "DotMatrixUploaded", "Courier New", "Lucida Console", Consolas, monospace;
+}
+
+.printer-page--dot-matrix {
+  font-family: "DotMatrixUploaded", "Courier New", "Lucida Console", Consolas, monospace;
+  color: #000000;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+.printer-page--dot-matrix .printer-element,
+.printer-page--dot-matrix .printer-managed-field,
+.printer-page--dot-matrix .printer-managed-row__placeholder {
+  font-family: inherit;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  transform: none;
+  text-shadow: 0.018em 0 0 currentColor;
+}
+
+.printer-page--dot-matrix .printer-element--dot-strip {
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+  color: #000000;
+  text-shadow: 0.018em 0 0 currentColor;
+  transform: none;
+}
+
+.printer-page--dot-matrix .printer-element--dot-strip .printer-element__text {
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+}
+
+.printer-page--dot-matrix .printer-element__text,
+.printer-page--dot-matrix .printer-element__field,
+.printer-page--dot-matrix .printer-element__weight,
+.printer-page--dot-matrix .printer-managed-field {
+  opacity: 1;
+}
+
+.printer-page--dot-matrix .printer-managed-field__label,
+.printer-page--dot-matrix .printer-managed-field__value,
+.printer-page--dot-matrix .printer-element__field-label,
+.printer-page--dot-matrix .printer-element__field-value,
+.printer-page--dot-matrix .printer-element__weight-label,
+.printer-page--dot-matrix .printer-element__weight-value,
+.printer-page--dot-matrix .printer-element__weight-meta,
+.printer-page--dot-matrix .printer-element__weight-unit {
+  font-family: inherit;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.printer-page--dot-matrix .printer-managed-row + .printer-managed-row {
+  border-top: 1px dashed #5f5f5f;
+}
+
+.printer-page--dot-matrix .printer-managed-row--draggable {
+  cursor: grab;
+}
+
+.printer-page--dot-matrix .printer-managed-row--draggable:active {
+  cursor: grabbing;
+}
+
+.printer-page--dot-matrix .printer-managed-field + .printer-managed-field {
+  border-left: 0;
+}
+
+.printer-page--dot-matrix .printer-managed-field,
+.printer-page--dot-matrix .printer-managed-row__placeholder {
+  padding: 0 2px;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.printer-element {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  overflow: hidden;
+  border-style: solid;
+  transition: box-shadow 140ms ease, outline-color 140ms ease;
+}
+
+.printer-element--interactive {
+  cursor: grab;
+  user-select: none;
+}
+
+.printer-element--interactive:hover {
+  box-shadow: none;
+}
+
+.printer-element--interactive:active {
+  cursor: grabbing;
+}
+
+.printer-element--interactive.is-selected {
+  outline: 0;
+  box-shadow: none;
+}
+
+.printer-element__resize {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 14px;
+  height: 14px;
+  border: 0;
+  background:
+    linear-gradient(135deg, transparent 0 52%, rgba(15, 23, 42, 0.55) 52% 62%, transparent 62% 72%, rgba(15, 23, 42, 0.55) 72% 82%, transparent 82%);
+  cursor: nwse-resize;
+  padding: 0;
+}
+
+.printer-element__delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(185, 28, 28, 0.95);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 3;
+}
+
+.printer-element__text,
+.printer-element__field,
+.printer-element__weight,
+.printer-element__image {
+  width: 100%;
+  height: 100%;
+}
+
+.printer-element__text {
+  display: flex;
+  align-items: center;
+  white-space: pre-wrap;
+  line-height: 1.12;
+  overflow: hidden;
+}
+
+.printer-element__field {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  column-gap: 2px;
+  line-height: 1.1;
+}
+
+.printer-element__field-label {
+  display: flex;
+  align-items: center;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.printer-element__field-value {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  text-align: left;
+  font-weight: 800;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.printer-element__weight {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.printer-element__weight-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  text-align: center;
+  border-bottom: 1px solid currentColor;
+  padding: 3px 6px 4px;
+  line-height: 1.05;
+}
+
+.printer-element__weight-body {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1px;
+  padding: 4px 6px 0;
+}
+
+.printer-element__weight-value {
+  line-height: 1;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.printer-element__weight-value-row {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.printer-element__weight-unit {
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.printer-element__weight-meta {
+  max-width: 100%;
+  line-height: 1.05;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.printer-element__image {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.printer-element__photo-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-bottom: 1px solid currentColor;
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.printer-element__image-body {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.printer-element__image-tag {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-position: center;
+}
+
+.printer-element__image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  text-align: center;
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.06), transparent 40%),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(148, 163, 184, 0.14),
+      rgba(148, 163, 184, 0.14) 10px,
+      rgba(255, 255, 255, 0.85) 10px,
+      rgba(255, 255, 255, 0.85) 20px
+    );
+}
+
+.printer-element__image-placeholder-text {
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.printer-element--printBreak {
+  pointer-events: auto;
+  border-style: dashed !important;
+  background: rgba(192, 38, 211, 0.06) !important;
+}
+
+.printer-element__print-break {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-top: 1px dashed currentColor;
+  color: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 1240px) {
+  .printer-sheet-stage {
+    padding: 14px;
+  }
+}

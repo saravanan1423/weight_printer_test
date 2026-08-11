@@ -1,0 +1,21 @@
+@media print {
+  .print-mode-a5,
+  .print-mode-a5 body,
+  .print-mode-a5 .print-preview-canvas {
+    width: var(--print-page-width, 210mm) !important;
+    max-width: var(--print-page-width, 210mm) !important;
+    height: var(--print-page-height, 148mm) !important;
+    max-height: var(--print-page-height, 148mm) !important;
+    overflow: hidden !important;
+  }
+
+  .print-mode-a5 .printer-sheet--print {
+    width: var(--print-content-width, 210mm) !important;
+    max-width: var(--print-content-width, 210mm) !important;
+    height: var(--print-content-height, 148mm) !important;
+    max-height: var(--print-content-height, 148mm) !important;
+    overflow: hidden !important;
+    transform: var(--a5-print-transform, translateX(7mm) scale(var(--a5-print-scale, 1)));
+    transform-origin: top left;
+  }
+}

@@ -1,0 +1,265 @@
+.admin-settings-card {
+  display: grid;
+  align-items: start;
+  padding: 18px;
+  background: rgba(255, 255, 255, .94);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 96px;
+}
+
+.admin-settings-panel {
+  width: min(100%, 1180px);
+  max-width: 1180px;
+  border: 1px solid rgba(220, 228, 235, .92);
+  border-radius: 14px;
+  background: #fff;
+  padding: 18px;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, .06);
+}
+
+.admin-settings-head h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 22px;
+}
+
+.admin-settings-head p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.admin-settings-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.admin-settings-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.admin-settings-tabs button {
+  height: 36px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.admin-settings-tabs button:not(.active) {
+  border-color: var(--line);
+  background: #fff;
+  color: #475569;
+}
+
+[data-admin-panel][hidden] {
+  display: none !important;
+}
+
+.admin-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.admin-toggle input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.admin-toggle span {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-toggle strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.admin-toggle small {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-update-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fafc;
+  min-width: 0;
+}
+
+.admin-update-card strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.admin-update-card small,
+.admin-update-status {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-update-actions button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 14px;
+  font-weight: 850;
+}
+
+.admin-update-actions button.primary {
+  border-color: #3f5be3;
+  background: #3f5be3;
+  color: #fff;
+}
+
+.admin-update-actions button:disabled {
+  opacity: .58;
+  cursor: not-allowed;
+}
+
+.admin-update-progress {
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(63, 91, 227, .22);
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.admin-update-progress__bar {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3f5be3, #10b981);
+  transition: width .2s ease;
+}
+
+.admin-update-status {
+  margin: 0;
+}
+
+.admin-update-status.error {
+  color: #dc2626;
+}
+
+.admin-printer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+  min-width: 0;
+}
+
+.admin-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-field span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.admin-field input,
+.admin-field select {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+  box-sizing: border-box;
+}
+
+.admin-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.admin-settings-actions button {
+  height: 40px;
+  border: 1px solid #3f5be3;
+  border-radius: 10px;
+  background: #3f5be3;
+  color: #fff;
+  padding: 0 16px;
+  font-weight: 850;
+}
+
+.master-field-settings {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.master-field-settings h2,
+.master-field-settings p {
+  margin: 0;
+}
+
+.master-field-settings h2 {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.master-field-settings p {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.master-field-settings__links,
+.master-field-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.master-field-settings__links a,
+.master-field-tabs a {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fafc;
+  color: var(--ink);
+  padding: 9px 12px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}

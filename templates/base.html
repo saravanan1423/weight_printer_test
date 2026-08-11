@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Weighman WMS{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css', v='20260721-1') }}">
+  {% block styles %}{% endblock %}
+</head>
+<body>
+  <div class="app">
+    <header class="app-topbar">
+      <div class="topbar-left">
+        <div class="topbar-logo">
+          <img src="{{ url_for('static', filename='weighman_logo.webp') }}" alt="Weighman logo">
+        </div>
+        <h1 class="topbar-title">Weighman WMS</h1>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-login">Logged in as <strong>Weighman</strong></div>
+        <div class="status" id="cameraConnectionStatus"><span class="dot"></span> Camera Disconnected</div>
+        <div class="status" id="scaleConnectionStatus"><span class="dot"></span> Device Disconnected</div>
+        <button class="topbar-logout" type="button" id="topLogoutBtn">Logout</button>
+      </div>
+    </header>
+
+    <div class="workspace-shell">
+      <nav class="nav" aria-label="Main navigation">
+        <button class="{% if request.endpoint == 'weightment.weightment' %}active{% endif %}" type="button" data-screen="weighment" data-nav-url="{{ url_for('weightment.weightment') }}"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20h12"></path><path d="M12 4v16"></path><path d="M7 8h10"></path><path d="M8 8l-3 6h6l-3-6z"></path><path d="M16 8l-3 6h6l-3-6z"></path></svg></span><span class="nav-label">Weighment</span></button>
+        <div class="nav-group">
+          <button class="master-trigger {% if request.endpoint in ['master.vehicle_number', 'master.vehicle_type', 'master.item_master', 'master.customer_master', 'master.credit_management'] %}active{% endif %}" type="button" aria-haspopup="true" aria-expanded="false"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="7" ry="3"></ellipse><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5"></path><path d="M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"></path></svg></span><span class="nav-label">Master</span><span class="dropdown-caret"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span></button>
+          <div class="dropdown" aria-label="Master menu">
+            <button type="button" data-master="vehicle-number" data-nav-url="{{ url_for('master.vehicle_number') }}">Vehicle Number</button>
+            <button type="button" data-master="vehicle-type" data-nav-url="{{ url_for('master.vehicle_type') }}">Vehicle Type</button>
+            <button type="button" data-master="customer-master" data-nav-url="{{ url_for('master.customer_master') }}">Customer</button>
+            <button type="button" data-master="item-master" data-nav-url="{{ url_for('master.item_master') }}">Material</button>
+            <button type="button" data-master="credit-management" data-nav-url="{{ url_for('master.credit_management') }}">Credit Management</button>
+          </div>
+        </div>
+        <button class="{% if request.endpoint == 'report.report' %}active{% endif %}" type="button" data-screen="reports" data-nav-url="{{ url_for('report.report') }}"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"></path><path d="M7 16V9"></path><path d="M12 16V5"></path><path d="M17 16v-7"></path></svg></span><span class="nav-label">Reports</span></button>
+        <div class="nav-group">
+          <button class="setting-trigger {% if request.endpoint in ['settings.communication', 'settings.camera', 'settings.printer', 'settings.email', 'settings.whatsapp', 'settings.custom_field', 'settings.delete_setting', 'settings.admin', 'settings.backup'] %}active{% endif %}" type="button" aria-haspopup="true" aria-expanded="false"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v3"></path><path d="M12 18v3"></path><path d="M3 12h3"></path><path d="M18 12h3"></path><path d="M5.6 5.6l2.1 2.1"></path><path d="M16.3 16.3l2.1 2.1"></path><path d="M18.4 5.6l-2.1 2.1"></path><path d="M7.7 16.3l-2.1 2.1"></path></svg></span><span class="nav-label">Settings</span><span class="dropdown-caret"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span></button>
+          <div class="dropdown" aria-label="Settings menu">
+            <button type="button" data-master="commnication-setting" data-nav-url="{{ url_for('settings.communication') }}">Commnication Settings</button>
+            <button type="button" data-master="camera-setting" data-nav-url="{{ url_for('settings.camera') }}">Camera Settings</button>
+            <button type="button" data-master="printer-setting" data-nav-url="{{ url_for('settings.printer') }}">Printer Settings</button>
+            <button type="button" data-master="admin-setting" data-nav-url="{{ url_for('settings.admin') }}">Admin Settings</button>
+            <button type="button" data-master="email-setting" data-nav-url="{{ url_for('settings.email') }}">Email Settings</button>
+            <button type="button" data-master="whatsapp-setting" data-nav-url="{{ url_for('settings.whatsapp') }}">WhatsApp Settings</button>
+            <button type="button" data-master="delete-setting" data-nav-url="{{ url_for('settings.delete_setting') }}">Delete Settings</button>
+            <button type="button" data-master="backup-setting" data-nav-url="{{ url_for('settings.backup') }}">Backup Settings</button>
+          </div>
+        </div>
+        <button type="button" data-screen="utilities" hidden><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5 5L4 17v3h3l5.7-5.7a4 4 0 0 0 5-5l-2.4 2.4-3-3 2.4-2.4z"></path></svg></span><span class="nav-label">Utilities</span></button>
+        <button type="button" data-screen="error-log" hidden><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 4.3L2.7 18a2 2 0 0 0 1.8 3h15a2 2 0 0 0 1.8-3L13.7 4.3a2 2 0 0 0-3.4 0z"></path></svg></span><span class="nav-label">Error Log</span></button>
+        <button type="button" data-screen="about-us" hidden><span class="nav-icon"><img src="{{ url_for('static', filename='weighman_logo.webp') }}" alt=""></span><span class="nav-label">About Us</span></button>
+        <div class="sidebar-footer">
+          <button class="sidebar-toggle" type="button" id="sidebarToggle" title="Toggle sidebar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+        </div>
+      </nav>
+
+      <main class="content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div>
+        <strong>Weider Weighing &amp; Automations</strong>
+        <span>Kallipalayam, Coimbatore, Tamil Nadu</span>
+      </div>
+      <span>version {{ app_version }}</span>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+    <div class="toast__body">
+      <div class="toast__icon" id="toastIcon" aria-hidden="true"></div>
+      <div class="toast__content">
+        <div class="toast__title" id="toastTitle"></div>
+        <div class="toast__message" id="toastMessage"></div>
+      </div>
+      <button type="button" class="toast__close" id="toastCloseButton" aria-label="Close notification">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="app-update-modal" id="appUpdateModal" aria-hidden="true">
+    <div class="app-update-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="appUpdateTitle">
+      <div class="app-update-modal__icon" aria-hidden="true">↑</div>
+      <div class="app-update-modal__body">
+        <h2 id="appUpdateTitle">Update available</h2>
+        <p id="appUpdateMessage">A new version of Weighman WMS is ready to install.</p>
+        <div class="app-update-modal__progress" id="appUpdateProgress" hidden>
+          <div class="app-update-modal__progress-bar" id="appUpdateProgressBar"></div>
+        </div>
+        <p class="app-update-modal__status" id="appUpdateStatus"></p>
+      </div>
+      <div class="app-update-modal__actions">
+        <button type="button" id="appUpdateLaterButton">Later</button>
+        <button type="button" class="primary" id="appUpdateNowButton">Update Now</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-lock-modal" id="settingsLockModal" aria-hidden="true">
+    <form class="settings-lock-modal__dialog" id="settingsLockForm" role="dialog" aria-modal="true" aria-labelledby="settingsLockTitle">
+      <div class="settings-lock-modal__icon" aria-hidden="true">⚙</div>
+      <div class="settings-lock-modal__body">
+        <h2 id="settingsLockTitle">Settings Password</h2>
+        <p>Enter the settings password to enable and open settings fields.</p>
+        <label class="settings-lock-modal__field">
+          <span>Password</span>
+          <input id="settingsLockPassword" type="password" autocomplete="current-password">
+        </label>
+        <p class="settings-lock-modal__error" id="settingsLockError" aria-live="polite"></p>
+      </div>
+      <div class="settings-lock-modal__actions">
+        <button type="button" id="settingsLockCancelButton">Cancel</button>
+        <button type="submit" class="primary" id="settingsLockUnlockButton">Unlock</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/base.js', v='20260721-1') }}"></script>
+  {% block scripts %}{% endblock %}
+
+</body>
+</html>

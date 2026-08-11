@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Credit Management | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/credit_management.css') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card credit-master-card">
+          <div class="credit-master-layout">
+            <section class="credit-master-panel credit-entry-panel">
+              <div class="credit-master-head">
+                <div>
+                  <h1>Credit Entry</h1>
+                </div>
+                <span class="entry-mode">Credit</span>
+              </div>
+
+              <form class="credit-entry-form" id="creditEntryForm">
+                <label class="credit-field">
+                  <span>Customer</span>
+                  <div class="credit-picker">
+                    <input id="creditCustomerInput" name="customerName" placeholder="Type customer name" autocomplete="off" required>
+                    <div class="vehicle-filter" id="creditCustomerFilter" aria-label="Customer suggestions"></div>
+                  </div>
+                </label>
+
+                <label class="credit-field">
+                  <span>Total Credit</span>
+                  <input id="totalCreditInput" name="totalCredit" type="number" min="0" autocomplete="off" required>
+                </label>
+
+                <div class="credit-form-actions">
+                  <button type="submit" class="primary" id="saveCreditButton">Save</button>
+                  <button type="button" class="secondary" id="addCreditButton" hidden>Add</button>
+                  <button type="button" id="clearCreditForm">Clear</button>
+                  <button type="button" class="danger" id="deleteCreditRow">Delete</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="credit-master-panel">
+              <div class="credit-master-head">
+                <div>
+                  <h1 class="credit-title-row">
+                    <span>Credit Available</span>
+                    <button type="button" class="credit-info-button" id="creditHistoryInfo" aria-label="Open credit history" title="View credit usage history">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 10v6"></path>
+                        <path d="M12 7h.01"></path>
+                      </svg>
+                    </button>
+                  </h1>
+                </div>
+                <label class="credit-search">
+                  <input id="creditSearchInput" type="search" placeholder="Search customer">
+                </label>
+              </div>
+
+              <div class="credit-table-wrap">
+                <table class="credit-table">
+                  <thead>
+                    <tr>
+                      <th>Customer Name</th>
+                      <th>Total Credit</th>
+                      <th>Credit Used</th>
+                      <th>Credit Available</th>
+                    </tr>
+                  </thead>
+                  <tbody id="creditTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <div class="credit-history-modal" id="creditHistoryModal" hidden>
+          <div class="credit-history-dialog" role="dialog" aria-modal="true" aria-labelledby="creditHistoryTitle">
+            <div class="credit-history-head">
+              <h2 id="creditHistoryTitle">Credit History</h2>
+              <button type="button" class="credit-history-close" id="creditHistoryClose" aria-label="Close">&times;</button>
+            </div>
+            <p class="credit-history-customer" id="creditHistoryCustomer"></p>
+            <div class="credit-history-table-wrap">
+              <table class="credit-history-table">
+                <thead>
+                  <tr>
+                    <th>Vehicle No</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="creditHistoryBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/credit_management.js') }}"></script>
+{% endblock %}

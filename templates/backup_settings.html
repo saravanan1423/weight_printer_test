@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Backup Settings | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/backup_settings.css', v='20260623-2') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card backup-settings-card">
+          <div class="backup-settings-layout">
+            <section class="backup-panel backup-form-panel">
+              <div class="backup-head">
+                <div>
+                  <h1>Backup Setting</h1>
+                  <p>Backup the database and today's IP camera images together.</p>
+                </div>
+                <span class="backup-status" id="backupStatus">Idle</span>
+              </div>
+
+              <form class="backup-form" id="backupSettingsForm">
+                <label class="backup-toggle">
+                  <input id="backupEnabled" type="checkbox">
+                  <span>
+                    <strong>Enable regular backup</strong>
+                    <small>The app will create a backup automatically while it is running.</small>
+                  </span>
+                </label>
+
+                <label class="backup-field">
+                  <span>Backup every</span>
+                  <div class="backup-inline-field">
+                    <input id="backupIntervalMinutes" type="number" min="5" max="1440" step="1" value="60">
+                    <small>minutes</small>
+                  </div>
+                </label>
+
+                <label class="backup-field">
+                  <span>Backup folder</span>
+                  <input id="backupTargetDir" type="text" placeholder="Leave blank to use app data folder">
+                  <small id="backupFolderHint">If blank, backups are saved inside the app data folder under backups.</small>
+                </label>
+
+                <div class="backup-actions">
+                  <button type="button" id="useGoogleDriveBtn">Use Google Drive</button>
+                  <button type="submit" class="primary">Save Settings</button>
+                  <button type="button" id="runBackupBtn">Backup Now</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="backup-panel backup-info-panel">
+              <div class="backup-info-card">
+                <span>Last Backup</span>
+                <strong id="backupLastRun">--</strong>
+              </div>
+              <div class="backup-info-card">
+                <span>Backup Format</span>
+                <strong>DB + today's images</strong>
+                <small>Each backup contains weighbridge_main.db and weighment_captures/current-date.</small>
+              </div>
+              <div class="backup-list-head">
+                <h2>Recent Backups</h2>
+                <button type="button" id="refreshBackupBtn">Refresh</button>
+              </div>
+              <div class="backup-list" id="backupList"></div>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/backup_settings.js', v='20260623-2') }}"></script>
+{% endblock %}

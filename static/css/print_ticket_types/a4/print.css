@@ -1,0 +1,10 @@
+@media print {
+  .print-mode-a4 .print-preview-canvas,
+  .print-mode-a4 .printer-sheet--print {
+    width: calc(100vw - 1px) !important;
+    max-width: calc(100vw - 1px) !important;
+    height: calc(100vh - 1px) !important;
+    max-height: calc(100vh - 1px) !important;
+    overflow: hidden !important;
+  }
+}

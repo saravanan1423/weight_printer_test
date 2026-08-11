@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Setting | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/delete_setting.css', v='20260622-2') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card delete-setting-card">
+          <div class="delete-setting-layout">
+            <section class="delete-panel records-panel">
+              <div class="delete-panel-head">
+                <div>
+                  <h1>Delete Setting</h1>
+                  <p>Registered weighments can be edited or deleted here only.</p>
+                </div>
+                <label class="record-search">
+                  <span>Search</span>
+                  <input id="deleteSearch" type="search" placeholder="S.No, vehicle, customer">
+                </label>
+              </div>
+              <div class="delete-filter-bar">
+                <label>
+                  <span>From Date</span>
+                  <input id="deleteFromDate" type="date">
+                </label>
+                <label>
+                  <span>To Date</span>
+                  <input id="deleteToDate" type="date">
+                </label>
+                <button type="button" class="primary" id="applyDeleteDateFilter">Apply</button>
+                <button type="button" id="clearDeleteDateFilter">Clear</button>
+                <button type="button" class="danger" id="deleteSelectedWeighments" disabled>Delete Selected</button>
+              </div>
+
+              <div class="delete-table-wrap">
+                <table class="delete-table">
+                  <thead>
+                    <tr>
+                      <th><input id="selectAllDeleteRows" type="checkbox" aria-label="Select all weighments"></th>
+                      <th>S.No</th>
+                      <th>Vehicle Number</th>
+                      <th>Customer</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="deleteTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="delete-panel edit-panel">
+              <div class="delete-panel-head">
+                <div>
+                  <h1>Edit Registered Entry</h1>
+                  <p id="editStatus">Select a row to edit or delete it.</p>
+                </div>
+              </div>
+
+              <form id="deleteSettingForm" class="delete-form">
+                <div class="delete-form-grid">
+                  <div class="float-field"><input id="editSerialNo" required><label for="editSerialNo">S.No</label></div>
+                  <div class="float-field"><input id="editRefNo" required><label for="editRefNo">Ref No</label></div>
+                  <div class="float-field"><input id="editEntryDate" type="date" required><label for="editEntryDate">Date</label></div>
+                  <div class="float-field"><input id="editEntryTime" required><label for="editEntryTime">Time</label></div>
+                  <div class="float-field"><input id="editVehicleNo" required><label for="editVehicleNo">Vehicle No</label></div>
+                  <div class="float-field"><input id="editWeighingType" required><label for="editWeighingType">Weighing Type</label></div>
+                  <div class="float-field"><input id="editMaterial"><label for="editMaterial">Material</label></div>
+                  <div class="float-field"><input id="editCustomer"><label for="editCustomer">Customer</label></div>
+                  <div class="float-field"><input id="editMobileNo"><label for="editMobileNo">Mobile No</label></div>
+                  <div class="float-field"><input id="editPaymentMode" required><label for="editPaymentMode">Payment Mode</label></div>
+                  <div class="float-field"><input id="editCharges" type="number" min="0"><label for="editCharges">Charges</label></div>
+                  <div class="float-field"><input id="editGrossWeight" type="number" min="0"><label for="editGrossWeight">Gross Weight</label></div>
+                  <div class="float-field"><input id="editGrossDate"><label for="editGrossDate">Gross Date</label></div>
+                  <div class="float-field"><input id="editGrossTime"><label for="editGrossTime">Gross Time</label></div>
+                  <div class="float-field"><input id="editTareWeight" type="number" min="0"><label for="editTareWeight">Tare Weight</label></div>
+                  <div class="float-field"><input id="editTareDate"><label for="editTareDate">Tare Date</label></div>
+                  <div class="float-field"><input id="editTareTime"><label for="editTareTime">Tare Time</label></div>
+                  <div class="float-field"><input id="editNetWeight" type="number" min="0"><label for="editNetWeight">Net Weight</label></div>
+                </div>
+
+                <div class="custom-edit-fields" id="customEditFields"></div>
+
+                <div class="delete-actions">
+                  <button type="submit" class="primary" id="updateWeighmentButton" disabled>Update</button>
+                  <button type="button" class="danger" id="deleteWeighmentButton" disabled>Delete</button>
+                  <button type="button" id="clearDeleteForm">Clear</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/delete_setting.js', v='20260629-1') }}"></script>
+{% endblock %}

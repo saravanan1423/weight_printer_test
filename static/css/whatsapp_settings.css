@@ -1,0 +1,128 @@
+.whatsapp-settings-layout {
+  grid-template-columns: minmax(300px, .68fr) minmax(0, 1fr);
+}
+
+.whatsapp-entry-panel {
+  gap: 16px;
+}
+
+.whatsapp-wide-field {
+  grid-column: 1 / -1;
+}
+
+.whatsapp-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.whatsapp-toggle input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.whatsapp-toggle span {
+  display: grid;
+  gap: 4px;
+}
+
+.whatsapp-toggle strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.whatsapp-toggle small {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.whatsapp-form textarea {
+  width: 100%;
+  min-height: 260px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  font: 700 14px/1.45 Consolas, "Courier New", monospace;
+  resize: vertical;
+}
+
+.whatsapp-test-box {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.whatsapp-test-box .communication-actions {
+  justify-content: flex-start;
+}
+
+#whatsappLastStatus {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+#whatsappLastStatus.success {
+  color: #047857;
+}
+
+#whatsappLastStatus.error {
+  color: #dc2626;
+}
+
+.whatsapp-instructions,
+.whatsapp-placeholders {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.whatsapp-instructions h2,
+.whatsapp-placeholders h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.whatsapp-instructions ol {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 22px;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.whatsapp-placeholders p {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+@media (max-width: 760px) {
+  .whatsapp-wide-field {
+    grid-column: auto;
+  }
+}

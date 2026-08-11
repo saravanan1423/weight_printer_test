@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Print Ticket {% if entry %}{{ entry.serialNo }}{% else %}Draft{% endif %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/printer_layout.css', v='20260802-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/print_ticket.css', v='20260730-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/print_ticket_types/a4/print.css', v='20260728-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/print_ticket_types/a5/print.css', v='20260730-2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/print_ticket_types/dot_matrix/print.css', v='20260810-1') }}">
+</head>
+<body class="print-preview-page">
+  <div class="print-preview-toolbar no-print">
+    <div>
+      <strong id="printPreviewTitle">{% if entry %}Ticket {{ entry.serialNo }}{% else %}Draft Ticket{% endif %}</strong>
+      <span id="printPreviewSubtitle">{% if entry %}{{ entry.vehicleNo }}{% else %}Current Form Values{% endif %}</span>
+    </div>
+    <div class="print-preview-toolbar__actions">
+      <button type="button" onclick="window.print()">Print</button>
+      <button type="button" onclick="window.close()">Close</button>
+    </div>
+  </div>
+
+  <main class="print-preview-canvas">
+    <div id="printerLayoutPreview" class="printer-sheet printer-sheet--print"></div>
+  </main>
+
+  <script>
+    window.PRINTER_LAYOUT_DATA = {{ layout|tojson }};
+    {% if entry %}
+    window.PRINTER_ENTRY_DATA = {{ entry|tojson }};
+    {% else %}
+    window.PRINTER_ENTRY_DATA = null;
+    {% endif %}
+  </script>
+  <script src="{{ url_for('static', filename='js/printer_renderer.js', v='20260802-2') }}"></script>
+  <script src="{{ url_for('static', filename='js/print_ticket_types/a4/print.js', v='20260728-1') }}"></script>
+  <script src="{{ url_for('static', filename='js/print_ticket_types/a5/print.js', v='20260730-4') }}"></script>
+  <script src="{{ url_for('static', filename='js/print_ticket_types/dot_matrix/print.js', v='20260810-1') }}"></script>
+  <script src="{{ url_for('static', filename='js/print_ticket.js', v='20260730-1') }}"></script>
+</body>
+</html>

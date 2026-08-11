@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Master | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/customer_master.css', v='20260630-1') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card customer-master-card">
+          <div class="customer-master-layout">
+            <section class="customer-master-panel customer-entry-panel">
+              <div class="customer-master-head">
+                <div>
+                  <h1>Customer Entry</h1>
+                </div>
+                <span class="entry-mode">Customer</span>
+              </div>
+
+              <form class="customer-entry-form" id="customerEntryForm">
+                <label class="customer-field">
+                  <span>{{ customer_fields.customerName.label }} <b class="required-label-mark">*</b></span>
+                  <input id="customerNameInput" name="customerName" autocomplete="off" required>
+                </label>
+
+                <label class="customer-field" {% if not customer_fields.mobileNumber.enabled %}hidden{% endif %}>
+                  <span>{{ customer_fields.mobileNumber.label }}{% if customer_fields.mobileNumber.required %} <b class="required-label-mark">*</b>{% endif %}</span>
+                  <input id="mobileNumberInput" name="mobileNumber" type="text" autocomplete="off" inputmode="numeric" maxlength="10" pattern="[0-9]*" {% if customer_fields.mobileNumber.required %}required{% endif %}>
+                </label>
+
+                <label class="customer-field" {% if not customer_fields.mobileNumber2.enabled %}hidden{% endif %}>
+                  <span>{{ customer_fields.mobileNumber2.label }}{% if customer_fields.mobileNumber2.required %} <b class="required-label-mark">*</b>{% endif %}</span>
+                  <input id="mobileNumber2Input" name="mobileNumber2" type="text" autocomplete="off" inputmode="numeric" maxlength="10" pattern="[0-9]*" {% if customer_fields.mobileNumber2.required %}required{% endif %}>
+                </label>
+
+                <div class="customer-form-actions">
+                  <button type="submit" class="primary">Save</button>
+                  <button type="button" id="clearCustomerForm">Clear</button>
+                  <button type="button" class="danger" id="deleteCustomerRow">Delete</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="customer-master-panel">
+              <div class="customer-master-head">
+                <div>
+                  <h1>Entered Customers</h1>
+                </div>
+                <label class="customer-search">
+                  <input id="customerSearchInput" type="search" placeholder="Search customer or mobile">
+                </label>
+              </div>
+
+              <div class="customer-table-wrap">
+                <table class="customer-table">
+                  <thead>
+                    <tr>
+                      <th>S.No</th>
+                      <th>Customer Name</th>
+                      <th>Mobile Number</th>
+                      <th>Mobile Number 2</th>
+                    </tr>
+                  </thead>
+                  <tbody id="customerTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/customer_master.js', v='20260630-1') }}"></script>
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Reports | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card reports-card">
+          <div class="reports-toolbar">
+            <fieldset class="date-range">
+              <legend>Date Range</legend>
+              <label>
+                <span>From</span>
+                <input id="fromDate" type="date" value="2026-05-01">
+              </label>
+              <label>
+                <span>To</span>
+                <input id="toDate" type="date" value="2026-05-12">
+              </label>
+              <button type="button" data-range="today">Today</button>
+              <button type="button" data-range="yesterday">Yesterday</button>
+              <button type="button" data-range="week">Week</button>
+              <button type="button" id="refreshReport">Refresh</button>
+            </fieldset>
+
+            <div class="report-actions">
+              <button type="button" id="smsSummary">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path></svg>
+                SMS Summary
+              </button>
+              <button type="button" class="primary" id="emailReport">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"></path><path d="m4 7 8 6 8-6"></path></svg>
+                <span id="emailReportLabel">Email Report</span>
+              </button>
+              <button type="button" class="success" id="exportCsv">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h8"></path></svg>
+                Export CSV
+              </button>
+              <button type="button" id="printReport">Print Report</button>
+              <button type="button" id="dotMatrixPrint">Dot Matrix</button>
+            </div>
+          </div>
+
+          <div class="summary-strip">
+            <div class="summary-card blue">
+              <svg class="summary-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path></svg>
+              <strong id="totalRecords">1</strong>
+              <span>Total Records</span>
+            </div>
+            <div class="summary-card green">
+              <svg class="summary-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><path d="M5 7h14"></path><path d="m6 7-3 7h6z"></path><path d="m18 7-3 7h6z"></path></svg>
+              <strong id="netWeight">0</strong>
+              <span>Net Weight (kg)</span>
+            </div>
+            <div class="summary-card amber">
+              <svg class="summary-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v10"></path><path d="M9 10c0-1.5 1.3-2.5 3-2.5s3 1 3 2.5c0 3-6 1.5-6 4.5 0 1.5 1.3 2.5 3 2.5s3-1 3-2.5"></path></svg>
+              <strong id="totalAmount">100.00</strong>
+              <span>Total Amount</span>
+            </div>
+          </div>
+
+          <div class="reports-layout">
+            <aside class="report-sidebar">
+              <section class="report-box filters">
+                <h2>Search Filters</h2>
+                <label><span>Customer</span><select id="customerFilter"><option value="">All</option><option>SA</option><option>Kovai Blue Metals</option></select></label>
+                <label><span>Vehicle No</span><select id="vehicleFilter"><option value="">All</option><option>TN36BY0020</option><option>KA 01 AB 4587</option></select></label>
+                <label><span>Material</span><select id="materialFilter"><option value="">All</option><option>N/A</option><option>M-Sand</option><option>Blue Metal</option></select></label>
+                <label><span>Vehicle Type</span><select id="vehicleTypeFilter"><option value="">All</option></select></label>
+                <div class="filter-actions">
+                  <button type="button" class="success" id="applyFilters">Apply Filters</button>
+                  <button type="button" id="clearFilters">Clear</button>
+                </div>
+              </section>
+            </aside>
+
+            <section class="report-main">
+              <div class="report-main-head">
+                <label class="table-search">
+                  <span>Search</span>
+                  <input id="tableSearch" type="search" placeholder="Search report rows">
+                </label>
+                <div class="table-tools">
+                  <button class="table-tool-button" id="viewOptionsToggle" type="button" title="Show view options" aria-label="Show view options" aria-expanded="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"></path><path d="M7 12h10"></path><path d="M10 18h4"></path><circle cx="9" cy="6" r="2"></circle><circle cx="15" cy="12" r="2"></circle><circle cx="12" cy="18" r="2"></circle></svg>
+                  </button>
+                  <button class="table-expand" id="tableExpand" type="button" title="Show full table" aria-label="Show full table">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5"></path><path d="M3 3l7 7"></path><path d="M16 3h5v5"></path><path d="M21 3l-7 7"></path><path d="M8 21H3v-5"></path><path d="M3 21l7-7"></path><path d="M16 21h5v-5"></path><path d="M21 21l-7-7"></path></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="report-table-wrap">
+                <table class="report-table">
+                  <thead>
+                    <tr id="reportTableHead">
+                      <th>Bill No</th>
+                      <th>Date</th>
+                      <th>Customer</th>
+                      <th>Vehicle No</th>
+                      <th>Material</th>
+                      <th>Net Wt</th>
+                      <th>Payment</th>
+                      <th>Paid Amt</th>
+                      <th>Status</th>
+                      <th>More</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reportTableBody"></tbody>
+                </table>
+              </div>
+
+              <div class="report-footer">
+                <span id="reportStatus">Success! Found 1 records.</span>
+                <div class="pagination">
+                  <span>Page</span>
+                  <input id="reportPageInput" value="1" readonly>
+                  <span>of</span>
+                  <span id="reportPageTotal">1</span>
+                  <button type="button">«</button>
+                  <button type="button">‹</button>
+                  <button type="button">›</button>
+                  <button type="button">»</button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="report-controls-modal" id="reportControlsModal" aria-hidden="true">
+            <div class="report-controls-panel" role="dialog" aria-modal="true" aria-labelledby="reportControlsTitle">
+              <div class="report-controls-head">
+                <div>
+                  <span>View Options</span>
+                  <h2 id="reportControlsTitle">Configure Columns</h2>
+                </div>
+                <button class="modal-close" id="closeReportControls" type="button" aria-label="Close report controls">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+              </div>
+
+              <div class="report-controls-stack">
+                <section class="report-box report-controls-box">
+                  <h2>Columns</h2>
+                  <div class="column-config open" id="columnConfig" aria-hidden="false">
+                    <div class="column-config-head">
+                      <span id="columnConfigCount">0/10 selected</span>
+                      <button type="button" id="resetColumns">Reset</button>
+                    </div>
+                    <div class="column-config-section">
+                      <h3>Text Alignment</h3>
+                      <label class="report-align-control">
+                        <span>Table Text</span>
+                        <select id="reportTextAlign">
+                          <option value="left">Left</option>
+                          <option value="center">Center</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div class="column-config-section">
+                      <h3>Shown in Table</h3>
+                      <div class="column-list" id="selectedColumns"></div>
+                    </div>
+                    <div class="column-config-section">
+                      <h3>Add Columns</h3>
+                      <div class="column-list" id="availableColumns"></div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+
+          <div class="report-modal" id="additionalFieldsModal" aria-hidden="true">
+            <div class="report-modal-panel" role="dialog" aria-modal="true" aria-labelledby="additionalFieldsTitle">
+              <div class="report-modal-head">
+                <div>
+                  <span>Additional Parameters</span>
+                  <h2 id="additionalFieldsTitle">Bill Details</h2>
+                </div>
+                <button class="modal-close" id="closeAdditionalFields" type="button" aria-label="Close additional parameters">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+              </div>
+              <div class="modal-fields" id="additionalFieldsBody"></div>
+            </div>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Vehicle Type Master | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/vehicle_type.css') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card vehicle-type-card">
+          <div class="vehicle-type-layout">
+            <section class="vehicle-type-panel vehicle-type-entry-panel">
+              <div class="vehicle-type-head">
+                <div>
+                  <h1>Vehicle Type Entry</h1>
+                </div>
+                <span class="entry-mode" id="vehicleTypeEntryMode">New</span>
+              </div>
+
+              <form class="vehicle-type-form" id="vehicleTypeForm">
+                <label class="vehicle-type-field">
+                  <span>Vehicle Type <b class="required-label-mark">*</b></span>
+                  <input id="vehicleTypeNameInput" name="vehicleTypeName" autocomplete="off" required>
+                </label>
+
+                <div class="vehicle-type-actions">
+                  <button type="submit" class="primary" id="vehicleTypeSubmitButton">Save</button>
+                  <button type="button" id="clearVehicleTypeForm">Clear</button>
+                  <button type="button" class="danger" id="deleteVehicleTypeRow">Delete</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="vehicle-type-panel">
+              <div class="vehicle-type-head">
+                <div>
+                  <h1>Entered Vehicle Types</h1>
+                </div>
+                <label class="vehicle-type-search">
+                  <input id="vehicleTypeSearchInput" type="search" placeholder="Search vehicle type">
+                </label>
+              </div>
+
+              <div class="vehicle-type-table-wrap">
+                <table class="vehicle-type-table">
+                  <thead>
+                    <tr>
+                      <th>S.No</th>
+                      <th>Vehicle Type</th>
+                    </tr>
+                  </thead>
+                  <tbody id="vehicleTypeTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/vehicle_type.js') }}"></script>
+{% endblock %}

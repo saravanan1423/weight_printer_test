@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Material Master | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/item_master.css') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card item-master-card">
+          <div class="item-master-layout">
+            <section class="item-master-panel item-entry-panel">
+              <div class="item-master-head">
+                <div>
+                  <h1>Material Entry</h1>
+                </div>
+                <span class="entry-mode">Material</span>
+              </div>
+
+              <form class="item-entry-form" id="itemEntryForm">
+                <label class="item-field">
+                  <span>Material <b class="required-label-mark">*</b></span>
+                  <input id="itemNameInput" name="itemName" autocomplete="off" required>
+                </label>
+
+                <div class="item-form-actions">
+                  <button type="submit" class="primary">Save</button>
+                  <button type="button" id="clearItemForm">Clear</button>
+                  <button type="button" class="danger" id="deleteItemRow">Delete</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="item-master-panel">
+              <div class="item-master-head">
+                <div>
+                  <h1>Entered Materials</h1>
+                </div>
+                <label class="item-search">
+                  <input id="itemSearchInput" type="search" placeholder="Search Material">
+                </label>
+              </div>
+
+              <div class="item-table-wrap">
+                <table class="item-table">
+                  <thead>
+                    <tr>
+                      <th>S.No</th>
+                      <th>Material</th>
+                    </tr>
+                  </thead>
+                  <tbody id="itemTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/item_master.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Settings | Weighman WMS{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_settings.css', v='20260724-1') }}">
+{% endblock %}
+
+{% block content %}
+        <section class="entry-card admin-settings-card">
+          <div class="admin-settings-panel">
+            <div class="admin-settings-head">
+              <div>
+                <h1>Admin Settings</h1>
+                <p>Control system-wide behavior. More options can be added here later.</p>
+              </div>
+            </div>
+
+            <nav class="admin-settings-tabs" aria-label="Admin setting groups">
+              <button type="button" class="active" data-admin-section="current">Main Screen Fields</button>
+              <button type="button" data-admin-section="master">Master Fields</button>
+              <button type="button" data-admin-link="{{ url_for('settings.custom_field') }}">Custom Fields</button>
+            </nav>
+
+            <form class="admin-settings-form" id="adminSettingsForm" data-admin-panel="current">
+              <label class="admin-toggle">
+                <input id="resetSerialDaily" type="checkbox">
+                <span>
+                  <strong>Reset S.No every day</strong>
+                  <small>If enabled, S.No starts again from 1 for each date. If disabled, S.No continues across all dates.</small>
+                </span>
+              </label>
+
+              <label class="admin-toggle">
+                <input id="resendButtonEnabled" type="checkbox">
+                <span>
+                  <strong>Show Resend button</strong>
+                  <small>If enabled, Resend is available on the weighment screen. If disabled, the button is hidden.</small>
+                </span>
+              </label>
+
+              <label class="admin-toggle">
+                <input id="liveWeightEnabled" type="checkbox">
+                <span>
+                  <strong>Capture live weight from machine</strong>
+                  <small>If enabled, the weighment screen uses the live scale reading. If disabled, it shows Manual Weight and allows the operator to type the weight.</small>
+                </span>
+              </label>
+
+              <div class="admin-update-card admin-printer-card">
+                <div>
+                  <strong>Printer Configuration & Auto-Print Settings</strong>
+                  <small>Set default printer, printer format type, and direct print behavior.</small>
+                </div>
+
+                <div class="admin-printer-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 6px;">
+                  <label class="admin-field" style="display: grid; gap: 4px;">
+                    <span style="font-weight: 750; font-size: 13px; color: var(--ink);">Default Printer Name (Windows Printers)</span>
+                    <select id="defaultPrinterName" style="height: 38px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font-weight: 700;">
+                      <option value="Default Printer">Loading Windows Printers...</option>
+                    </select>
+                  </label>
+
+                  <label class="admin-field" style="display: grid; gap: 4px;">
+                    <span style="font-weight: 750; font-size: 13px; color: var(--ink);">Configured Printer Format</span>
+                    <select id="configuredPrinterType" style="height: 38px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font-weight: 700;">
+                      <option value="dot_matrix">Dot Matrix Printer</option>
+                      <option value="a4">A4 Printer</option>
+                      <option value="a5">A5 Printer</option>
+                      <option value="thermal">Thermal Printer</option>
+                      <option value="pdf">PDF Printer (Save as PDF)</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label class="admin-toggle" style="margin-top: 6px;">
+                  <input id="directPrintEnabled" type="checkbox">
+                  <span>
+                    <strong>Enable Direct Auto-Print (Skip Preview Screen)</strong>
+                    <small>If enabled, clicking Print automatically sends the ticket directly to the default printer without showing a print preview screen.</small>
+                  </span>
+                </label>
+
+                <div class="admin-update-actions" style="margin-top: 6px;">
+                  <button type="button" id="testPrinterButton">Test Connection & Print</button>
+                </div>
+                <p id="printerTestStatus" class="admin-update-status">Click 'Test Connection & Print' to test configured printer.</p>
+              </div>
+
+              <div class="admin-update-card">
+                <div>
+                  <strong>Network Auto Update</strong>
+                  <small>Current version: <span id="appVersion">--</span>. Updates are checked from GitHub.</small>
+                </div>
+                <div class="admin-update-actions">
+                  <button type="button" id="checkUpdateButton">Check Update</button>
+                  <button type="button" id="applyUpdateButton" class="primary" disabled>Download & Restart</button>
+                </div>
+                <div class="admin-update-progress" id="updateProgress" hidden>
+                  <div class="admin-update-progress__bar" id="updateProgressBar"></div>
+                </div>
+                <p id="updateStatus" class="admin-update-status">No update check yet.</p>
+              </div>
+
+              <div class="admin-settings-actions">
+                <button type="submit" class="primary">Save Settings</button>
+              </div>
+            </form>
+
+            <section class="master-field-settings" data-admin-panel="master" hidden>
+              <div>
+                <h2>Master Field Settings</h2>
+                <p>Choose a Master screen to rename fields or control Enabled and Required states.</p>
+              </div>
+              <div class="master-field-settings__links">
+                <a href="{{ url_for('settings.custom_field', scope='master', section='vehicle_number') }}">Vehicle Number</a>
+                <a href="{{ url_for('settings.custom_field', scope='master', section='vehicle_type') }}">Vehicle Type</a>
+                <a href="{{ url_for('settings.custom_field', scope='master', section='material') }}">Material</a>
+                <a href="{{ url_for('settings.custom_field', scope='master', section='customer') }}">Customer</a>
+              </div>
+            </section>
+          </div>
+        </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/admin_settings.js', v='20260724-1') }}"></script>
+{% endblock %}

@@ -1,0 +1,67 @@
+@media print {
+  /* The @page size is generated dynamically by print.js based on the ticket
+     dimensions and print-break position. */
+
+  .print-mode-dot-matrix .printer-element {
+    overflow: visible;
+  }
+
+  .print-mode-dot-matrix .printer-element--right-side .printer-element__text {
+    justify-content: flex-end !important;
+    text-align: right !important;
+  }
+
+  .print-mode-dot-matrix .print-preview-canvas,
+  .print-mode-dot-matrix,
+  .print-mode-dot-matrix body {
+    width: var(--print-page-width, 254mm) !important;
+    height: var(--dot-matrix-print-break-height, var(--print-page-height, 140mm)) !important;
+    max-width: var(--print-page-width, 254mm) !important;
+    max-height: var(--dot-matrix-print-break-height, var(--print-page-height, 140mm)) !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-mode-dot-matrix .printer-sheet--print {
+    width: var(--print-page-width, 254mm) !important;
+    height: var(--dot-matrix-print-break-height, var(--print-page-height, 140mm)) !important;
+    max-width: var(--print-page-width, 254mm) !important;
+    max-height: var(--dot-matrix-print-break-height, var(--print-page-height, 140mm)) !important;
+    overflow: hidden !important;
+    transform: none !important;
+    transform-origin: top left;
+    top: 0 !important;
+    left: 0 !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-mode-dot-matrix .printer-page {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: var(--print-content-width, 254mm) !important;
+    height: var(--dot-matrix-print-break-height, var(--dot-matrix-ticket-height, var(--print-content-height, 140mm))) !important;
+    max-width: var(--print-content-width, 254mm) !important;
+    max-height: var(--dot-matrix-print-break-height, var(--dot-matrix-ticket-height, var(--print-content-height, 140mm))) !important;
+    overflow: hidden !important;
+    transform: var(--dot-matrix-print-transform, none) !important;
+    transform-origin: top left;
+    zoom: 1 !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* When a print-break element is present, clip the page to the break height. */
+  .print-mode-dot-matrix .printer-page--has-print-break {
+    height: var(--dot-matrix-print-break-height) !important;
+    max-height: var(--dot-matrix-print-break-height) !important;
+    overflow: hidden !important;
+  }
+
+  /* The printBreak marker itself is invisible on paper — it is a designer-only guide. */
+  .print-mode-dot-matrix .printer-element--printBreak {
+    display: none !important;
+  }
+}
