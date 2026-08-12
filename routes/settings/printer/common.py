@@ -637,6 +637,7 @@ def normalize_field_row_field(field, valid_field_keys, row_index, field_index):
         "id": normalize_text(field.get("id"), fallback_id, max_length=60) or fallback_id,
         "col": normalized_col,
         "fontSize": normalize_int(field.get("fontSize"), 8, 6, 18),
+        "fontWeight": normalize_font_weight(field.get("fontWeight"), 400),
         "cpi": normalize_int(field.get("cpi"), 10, 5, 20),
         "fontFamily": normalize_font_family(field.get("fontFamily"), DEFAULT_DOT_MATRIX_FONT_FAMILY),
         "textColor": normalize_optional_color(field.get("textColor")),
@@ -682,6 +683,10 @@ def normalize_field_rows(rows, defaults, valid_field_keys):
         ]
         normalized_rows.append({
             "id": normalize_text(row.get("id"), f"row-{row_index + 1}", max_length=60) or f"row-{row_index + 1}",
+            "fontFamily": normalize_font_family(row.get("fontFamily"), DEFAULT_DOT_MATRIX_FONT_FAMILY),
+            "fontSize": normalize_int(row.get("fontSize"), 8, 6, 18),
+            "fontWeight": normalize_font_weight(row.get("fontWeight"), 400),
+            "cpi": normalize_int(row.get("cpi"), 10, 5, 20),
             "fields": normalized_fields,
         })
 
@@ -1089,6 +1094,20 @@ def normalize_printer_layout(layout, custom_columns, fallback_printer_type=DEFAU
                 if isinstance(layout.get("defaults"), dict)
                 else None,
                 defaults.get("defaults", {}).get("fontFamily", DEFAULT_DOT_MATRIX_FONT_FAMILY),
+            ),
+            "fontWeight": normalize_font_weight(
+                (layout.get("defaults") or {}).get("fontWeight")
+                if isinstance(layout.get("defaults"), dict)
+                else None,
+                400,
+            ),
+            "cpi": normalize_int(
+                (layout.get("defaults") or {}).get("cpi")
+                if isinstance(layout.get("defaults"), dict)
+                else None,
+                10,
+                5,
+                20,
             ),
         } if printer_type == "dot_matrix" else {},
         "rawBlockPositions": {
@@ -2210,15 +2229,19 @@ def build_printer_layout_response(custom_columns, layout_name=None, message=None
 
 def save_printer_layout(layout, custom_columns, layout_name=None, printer_type=None):
     rows = ensure_printer_default_template(custom_columns)
+    resolved_printer_type = normalize_printer_type(printer_type) if printer_type else (
+        normalize_printer_type(layout.get("printerType")) if isinstance(layout, dict) else DEFAULT_PRINTER_TYPE
+    )
+    fallback_name = default_template_name_for_printer_type(resolved_printer_type)
     resolved_name = normalize_layout_name(
-        layout_name,
-        resolve_printer_layout_name(custom_columns),
+        layout_name or (layout.get("name") if isinstance(layout, dict) else ""),
+        fallback_name,
     )
     if resolved_name == PRINTER_LAYOUT_SETTINGS_NAME:
         raise ValueError("This template name is reserved")
 
     row = find_printer_template_row(resolved_name, rows)
-    fallback_printer_type = printer_template_row_printer_type(row) if row is not None else normalize_printer_type(printer_type)
+    fallback_printer_type = printer_template_row_printer_type(row) if row is not None else resolved_printer_type
     normalized = normalize_printer_layout(layout, custom_columns, fallback_printer_type)
 
     if is_base_printer_template_name(resolved_name, rows, printer_type) and base_template_requires_restricted_editing(resolved_name, fallback_printer_type):

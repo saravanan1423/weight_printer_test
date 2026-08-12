@@ -437,7 +437,4 @@ def is_outdated_empty_dot_matrix_template_layout(layout):
         return True
     if normalize_text(layout.get("templateKind"), "", max_length=40) != "blank_canvas":
         return True
-    if layout.get("rawStructuralBlocks") != []:
-        return True
-    if layout.get("fieldRows") or layout.get("elements"):
-        return True
+    return False

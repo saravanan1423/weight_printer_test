@@ -100,6 +100,8 @@ const printerState = {
   currentLayoutName: "",
   currentPrinterType: "",
   selectedElementId: null,
+  selectedRawBlockId: null,
+  selectedRawFieldId: null,
   activeInteraction: null,
   activeManagedRowInteraction: null,
   dragAddKind: null,
@@ -330,20 +332,31 @@ function canDeleteManagedField(field) {
 
 function updateInspectorPanelMode() {
   const element = findSelectedElement();
-  const hasElement = Boolean(element);
+  const rawSelection = findSelectedRawField();
+  const hasSelection = Boolean(element || rawSelection);
 
   if (printerControls.inspectorTitle) {
-    printerControls.inspectorTitle.textContent = hasElement ? "Selected Element" : "Layout Settings";
+    if (rawSelection) {
+      printerControls.inspectorTitle.textContent = "Dot Matrix Field Settings";
+    } else if (element) {
+      printerControls.inspectorTitle.textContent = "Selected Element";
+    } else {
+      printerControls.inspectorTitle.textContent = "Layout Settings";
+    }
   }
 
   if (printerControls.inspectorDescription) {
-    printerControls.inspectorDescription.textContent = hasElement
-      ? "Fine-tune the highlighted block or upload a logo image."
-      : "Adjust page size, row groups, and add new content when nothing is selected.";
+    if (rawSelection) {
+      printerControls.inspectorDescription.textContent = "Configure font family, font size, font weight, and character pitch (CPI) for this field.";
+    } else if (element) {
+      printerControls.inspectorDescription.textContent = "Fine-tune the highlighted block or upload a logo image.";
+    } else {
+      printerControls.inspectorDescription.textContent = "Adjust page size, row groups, and add new content when nothing is selected.";
+    }
   }
 
-  printerControls.inspectorDefaultMode?.classList.toggle("is-hidden", hasElement);
-  printerControls.inspectorElementMode?.classList.toggle("is-hidden", !hasElement);
+  printerControls.inspectorDefaultMode?.classList.toggle("is-hidden", hasSelection);
+  printerControls.inspectorElementMode?.classList.toggle("is-hidden", !hasSelection);
 }
 
 function createTemplateSourceOptions() {
@@ -400,14 +413,34 @@ function nextFieldRowFieldId(row) {
   return nextId;
 }
 
+function getNextAvailableFieldSource(existingRow = null) {
+  const preferredDefaultSources = [
+    "serialNo", "vehicleNo", "customer", "material", "supplier",
+    "grossWeight", "tareWeight", "netWeight", "entryDate", "entryTime"
+  ];
+  const usedSources = new Set(
+    flattenedDotMatrixFieldRows().flatMap(t => (t.row.fields || []).map(f => f.source))
+  );
+  if (existingRow && Array.isArray(existingRow.fields)) {
+    existingRow.fields.forEach(f => usedSources.add(f.source));
+  }
+  for (const key of preferredDefaultSources) {
+    if (!usedSources.has(key)) {
+      return key;
+    }
+  }
+  return printerControls.quickAddFieldSource?.value || printerState.fieldOptions?.[0]?.key || "serialNo";
+}
+
 function createManagedRowField(row, source = null) {
-  const resolvedSource = source || printerControls.quickAddFieldSource?.value || "serialNo";
+  const resolvedSource = source || getNextAvailableFieldSource(row);
   const defaultFontFamily = printerState.layout?.defaults?.fontFamily || DOT_MATRIX_DEFAULT_FONT_FAMILY;
   return {
     id: nextFieldRowFieldId(row),
     label: optionLabelFor(printerState.fieldOptions, resolvedSource, "Field"),
     source: resolvedSource,
     fontSize: 8,
+    fontWeight: 400,
     cpi: currentPrinterType() === "dot_matrix" ? 10 : 10,
     fontFamily: currentPrinterType() === "dot_matrix" ? defaultFontFamily : "",
     textColor: currentPrinterType() === "dot_matrix" ? "#000000" : "",
@@ -1107,12 +1140,31 @@ function renderFieldRowsManager() {
             </label>
             ${isDotMatrix ? `
               <label class="printer-field">
-                <span>CPI</span>
-                <input type="number" min="5" max="20" step="1" data-section-id="${section.id}" data-row-id="${row.id}" data-field-id="${field.id}" data-row-field-prop="cpi" value="${escapeHtml(field.cpi ?? 10)}" ${isLocked ? "disabled" : ""}>
-              </label>
-              <label class="printer-field">
                 <span>Font Family</span>
                 <select data-section-id="${section.id}" data-row-id="${row.id}" data-field-id="${field.id}" data-row-field-prop="fontFamily" ${isLocked ? "disabled" : ""}></select>
+              </label>
+              <label class="printer-field">
+                <span>Font Size (pt)</span>
+                <input type="number" min="6" max="18" step="1" data-section-id="${section.id}" data-row-id="${row.id}" data-field-id="${field.id}" data-row-field-prop="fontSize" value="${escapeHtml(field.fontSize ?? 8)}" ${isLocked ? "disabled" : ""}>
+              </label>
+              <label class="printer-field">
+                <span>Font Weight</span>
+                <select data-section-id="${section.id}" data-row-id="${row.id}" data-field-id="${field.id}" data-row-field-prop="fontWeight" ${isLocked ? "disabled" : ""}>
+                  <option value="400" ${(field.fontWeight == 400 || !field.fontWeight) ? "selected" : ""}>400 (Normal)</option>
+                  <option value="600" ${field.fontWeight == 600 ? "selected" : ""}>600 (Semi-Bold)</option>
+                  <option value="700" ${field.fontWeight == 700 ? "selected" : ""}>700 (Bold / Emphasized)</option>
+                  <option value="900" ${field.fontWeight == 900 ? "selected" : ""}>900 (Extra Bold)</option>
+                </select>
+              </label>
+              <label class="printer-field">
+                <span>Pitch / CPI</span>
+                <select data-section-id="${section.id}" data-row-id="${row.id}" data-field-id="${field.id}" data-row-field-prop="cpi" ${isLocked ? "disabled" : ""}>
+                  <option value="5" ${field.cpi == 5 ? "selected" : ""}>5 CPI (Double-Wide / Expanded)</option>
+                  <option value="10" ${(field.cpi == 10 || !field.cpi) ? "selected" : ""}>10 CPI (Standard)</option>
+                  <option value="12" ${field.cpi == 12 ? "selected" : ""}>12 CPI (Elite)</option>
+                  <option value="15" ${field.cpi == 15 ? "selected" : ""}>15 CPI (Compressed)</option>
+                  <option value="17" ${field.cpi == 17 ? "selected" : ""}>17 CPI (Condensed)</option>
+                </select>
               </label>
               <label class="printer-field">
                 <span>Text Color</span>
@@ -1382,6 +1434,11 @@ function updateRowFieldProperty(sectionId, rowId, fieldId, property, value) {
     return true;
   }
 
+  if (property === "fontWeight") {
+    field.fontWeight = Number(value) || 400;
+    return true;
+  }
+
   if (property === "cpi") {
     field.cpi = clamp(Number(value || field.cpi || 10), 5, 20);
     return true;
@@ -1430,11 +1487,192 @@ function renderElementList() {
   });
 }
 
+function findSelectedRawField() {
+  if (!printerState.selectedRawBlockId) return null;
+  const blockId = printerState.selectedRawBlockId;
+  const fieldId = printerState.selectedRawFieldId;
+  const target = fieldRowAtBlockId(blockId);
+  if (!target || !target.row) return null;
+  const fields = target.row.fields || [];
+  const field = fieldId ? fields.find(f => f.id === fieldId) : fields[0];
+  if (!field) return null;
+  return {
+    section: target.section,
+    row: target.row,
+    field: field,
+    blockId: blockId,
+  };
+}
+
+function selectRawField(blockId, fieldId) {
+  printerState.selectedElementId = null;
+  printerState.selectedRawBlockId = blockId;
+  printerState.selectedRawFieldId = fieldId;
+  renderInspector();
+  refreshDotMatrixRawPreview();
+}
+
+function selectRawRow(blockId) {
+  printerState.selectedElementId = null;
+  printerState.selectedRawBlockId = blockId;
+  const target = fieldRowAtBlockId(blockId);
+  const firstField = target?.row?.fields?.[0];
+  printerState.selectedRawFieldId = firstField?.id || null;
+  renderInspector();
+  refreshDotMatrixRawPreview();
+}
+
+function updateSelectedRawFieldProperty(target) {
+  const rawSelection = findSelectedRawField();
+  if (!rawSelection) return false;
+  const { field } = rawSelection;
+  const prop = target.dataset.rawFieldProp;
+  const val = target.value;
+
+  if (prop === "fontFamily") {
+    field.fontFamily = val;
+  } else if (prop === "fontSize") {
+    field.fontSize = clamp(Number(val || 8), 6, 18);
+  } else if (prop === "fontWeight") {
+    field.fontWeight = Number(val) || 400;
+  } else if (prop === "cpi") {
+    field.cpi = clamp(Number(val || 10), 5, 20);
+  } else if (prop === "textColor") {
+    field.textColor = /^#[0-9a-fA-F]{6}$/.test(String(val || "").trim()) ? String(val).toUpperCase() : (field.textColor || "#000000");
+  } else if (prop === "col") {
+    field.col = val === "" ? null : Math.max(0, Math.min(80, parseInt(val, 10)));
+  } else if (prop === "label") {
+    field.label = val;
+  } else if (prop === "source") {
+    field.source = val;
+  } else if (prop === "text") {
+    field.text = val;
+  } else {
+    return false;
+  }
+  refreshDotMatrixRawPreview();
+  renderFieldRowsManager();
+  return true;
+}
+
+function renderRawFieldInspector(rawSelection) {
+  const { section, row, field, blockId } = rawSelection;
+  const isLocked = currentTemplateIsLocked();
+  const isTextField = field.kind === "text";
+  const fontFamily = field.fontFamily || DOT_MATRIX_DEFAULT_FONT_FAMILY;
+  const fontSize = field.fontSize ?? 8;
+  const fontWeight = field.fontWeight ?? 400;
+  const cpi = field.cpi ?? 10;
+  const textColor = field.textColor || "#000000";
+
+  printerControls.inspector.innerHTML = `
+    <div class="printer-field-grid printer-field-grid--two">
+      <label class="printer-field">
+        <span>Field ID</span>
+        <input value="${escapeHtml(field.id || "")}" disabled>
+      </label>
+      <label class="printer-field">
+        <span>Row Block</span>
+        <input value="${escapeHtml(blockId)}" disabled>
+      </label>
+    </div>
+
+    ${isTextField ? `
+      <label class="printer-field">
+        <span>Text Content</span>
+        <input data-raw-field-prop="text" value="${escapeHtml(field.text || "")}" autocomplete="off" ${isLocked ? "disabled" : ""}>
+      </label>
+    ` : `
+      <div class="printer-field-grid printer-field-grid--two">
+        <label class="printer-field">
+          <span>Field Label</span>
+          <input data-raw-field-prop="label" value="${escapeHtml(field.label || "")}" autocomplete="off" ${isLocked ? "disabled" : ""}>
+        </label>
+        <label class="printer-field">
+          <span>Value Source</span>
+          <select data-raw-field-prop="source" ${isLocked ? "disabled" : ""}></select>
+        </label>
+      </div>
+    `}
+
+    <div class="printer-sidebar-section__head" style="margin-top: 14px; margin-bottom: 6px;">
+      <h3>Typography & Print Font</h3>
+      <p>Configure font style carried to the Dot Matrix printer.</p>
+    </div>
+
+    <div class="printer-field-grid printer-field-grid--two">
+      <label class="printer-field">
+        <span>Font Family</span>
+        <select data-raw-field-prop="fontFamily" ${isLocked ? "disabled" : ""}></select>
+      </label>
+      <label class="printer-field">
+        <span>Font Weight</span>
+        <select data-raw-field-prop="fontWeight" ${isLocked ? "disabled" : ""}>
+          <option value="400" ${fontWeight == 400 ? "selected" : ""}>400 (Normal)</option>
+          <option value="600" ${fontWeight == 600 ? "selected" : ""}>600 (Semi-Bold)</option>
+          <option value="700" ${fontWeight == 700 ? "selected" : ""}>700 (Bold / Emphasized)</option>
+          <option value="900" ${fontWeight == 900 ? "selected" : ""}>900 (Extra Bold / Double-Strike)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="printer-field-grid printer-field-grid--two">
+      <label class="printer-field">
+        <span>Font Size (pt)</span>
+        <input type="number" min="6" max="18" step="1" data-raw-field-prop="fontSize" value="${fontSize}" ${isLocked ? "disabled" : ""}>
+      </label>
+      <label class="printer-field">
+        <span>Pitch / Size (CPI)</span>
+        <select data-raw-field-prop="cpi" ${isLocked ? "disabled" : ""}>
+          <option value="5" ${cpi == 5 ? "selected" : ""}>5 CPI (Double-Wide / Expanded)</option>
+          <option value="10" ${cpi == 10 ? "selected" : ""}>10 CPI (Standard 80 chars)</option>
+          <option value="12" ${cpi == 12 ? "selected" : ""}>12 CPI (Elite 96 chars)</option>
+          <option value="15" ${cpi == 15 ? "selected" : ""}>15 CPI (Compressed 120 chars)</option>
+          <option value="17" ${cpi == 17 ? "selected" : ""}>17 CPI (Condensed 137 chars)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="printer-field-grid printer-field-grid--two">
+      <label class="printer-field">
+        <span>Column Offset (0-80)</span>
+        <input type="number" min="0" max="80" step="1" data-raw-field-prop="col" value="${field.col ?? ""}" placeholder="Auto (evenly spaced)" ${isLocked ? "disabled" : ""}>
+      </label>
+      <label class="printer-field">
+        <span>Text Color</span>
+        <input type="color" data-raw-field-prop="textColor" value="${textColor}" ${isLocked ? "disabled" : ""}>
+      </label>
+    </div>
+  `;
+
+  if (!isTextField) {
+    populateSelect(
+      printerControls.inspector.querySelector('select[data-raw-field-prop="source"]'),
+      printerState.fieldOptions,
+      field.source
+    );
+  }
+  populateSimpleSelect(
+    printerControls.inspector.querySelector('select[data-raw-field-prop="fontFamily"]'),
+    DOT_MATRIX_FONT_FAMILY_OPTIONS,
+    fontFamily
+  );
+}
+
 function renderInspector() {
   updateInspectorPanelMode();
+
+  if (currentPrinterType() === "dot_matrix") {
+    const rawSelection = findSelectedRawField();
+    if (rawSelection) {
+      renderRawFieldInspector(rawSelection);
+      return;
+    }
+  }
+
   const element = findSelectedElement();
   if (!element) {
-    printerControls.inspector.innerHTML = '<div class="printer-empty-state">Select an element from the canvas.</div>';
+    printerControls.inspector.innerHTML = '<div class="printer-empty-state">Select an element or click any row/field from the preview canvas.</div>';
     return;
   }
 
@@ -1669,11 +1907,14 @@ function selectElement(elementId) {
 }
 
 function clearSelection() {
-  if (!printerState.selectedElementId) return;
+  if (!printerState.selectedElementId && !printerState.selectedRawBlockId && !printerState.selectedRawFieldId) return;
   printerState.selectedElementId = null;
+  printerState.selectedRawBlockId = null;
+  printerState.selectedRawFieldId = null;
   renderElementList();
   renderInspector();
   renderPreview();
+  refreshDotMatrixRawPreview();
 }
 
 function syncInspectorPositionValues() {
@@ -2572,6 +2813,17 @@ function renderRawPreviewGrid(lines, lineBlocks) {
     }
     row.appendChild(content);
 
+    const isFieldRowSelected = Boolean(blockId && blockId === printerState.selectedRawBlockId);
+    if (isFieldRowSelected) {
+      row.classList.add("is-selected");
+    }
+    row.addEventListener("click", event => {
+      if (event.target.closest(".raw-field-chip") || event.target.closest("button") || event.target.closest("input") || event.target.closest("[contenteditable]")) return;
+      if (blockId && blockId.startsWith("field-row-")) {
+        selectRawRow(blockId);
+      }
+    });
+
     const isHeaderTextBlock = blockId && RAW_HEADER_TEXT_BLOCK_KEYS[blockId];
     const isSignatureBlock = blockId === "signatures" && (blockLineIndex === 0 || blockLineIndex === 2);
     const isRemovableStructuralBlock = blockId && RAW_OPTIONAL_STRUCTURAL_BLOCK_IDS.includes(blockId) && blockLineIndex === 0;
@@ -2683,8 +2935,10 @@ function removeStructuralBlock(blockId) {
 
 function renderEditableHeaderLine(container, blockId) {
   const key = RAW_HEADER_TEXT_BLOCK_KEYS[blockId];
+  if (!key) return;
   const headerText = ensureRawHeaderText();
-  container.classList.toggle("raw-grid-row__content--empty", !(headerText[key] || "").trim());
+  const isBlank = !(headerText[key] || "").trim();
+  container.classList.toggle("raw-grid-row__content--empty", isBlank);
 
   const handle = document.createElement("span");
   handle.className = "raw-line-handle";
@@ -2696,65 +2950,66 @@ function renderEditableHeaderLine(container, blockId) {
   handle.addEventListener("dragend", handleRawGridDragEnd);
   container.appendChild(handle);
 
-  const text = document.createElement("span");
-  text.className = "raw-line-text";
-  text.textContent = headerText[key] || "";
-  text.contentEditable = "true";
-  text.dataset.placeholder = "· empty — drop here ·";
-  text.title = "Click to edit";
-  text.addEventListener("blur", () => {
-    const value = text.textContent.trim();
+  const span = document.createElement("span");
+  span.className = "raw-line-text";
+  span.textContent = headerText[key] || "";
+  span.contentEditable = "true";
+  span.dataset.placeholder = "· empty — drop here ·";
+  span.title = "Click to edit text";
+  span.addEventListener("blur", () => {
+    const value = span.textContent.trim();
     if (headerText[key] !== value) {
       headerText[key] = value;
       refreshDotMatrixRawPreview();
     }
   });
-  container.appendChild(text);
+  container.appendChild(span);
 }
 
 function renderEditableSignatureLine(container) {
   const headerText = ensureRawHeaderText();
-  container.classList.toggle("raw-grid-row__content--empty", !(headerText.leftSign || "").trim() && !(headerText.rightSign || "").trim());
+  const isBlank = !(headerText.leftSign || "").trim() && !(headerText.rightSign || "").trim();
+  container.classList.toggle("raw-grid-row__content--empty", isBlank);
 
   const handle = document.createElement("span");
   handle.className = "raw-line-handle";
   handle.draggable = true;
   handle.textContent = "⠿";
-  handle.title = "Drag to move the signature line elsewhere on the ticket";
+  handle.title = "Drag to move the signatures elsewhere on the ticket";
   handle.dataset.blockId = "signatures";
   handle.addEventListener("dragstart", handleRawGridDragStart);
   handle.addEventListener("dragend", handleRawGridDragEnd);
   container.appendChild(handle);
 
-  const left = document.createElement("span");
-  left.className = "raw-line-text";
-  left.textContent = headerText.leftSign || "";
-  left.contentEditable = "true";
-  left.dataset.placeholder = "· empty — drop here ·";
-  left.title = "Click to edit";
-  left.addEventListener("blur", () => {
-    const value = left.textContent.trim();
+  const leftSpan = document.createElement("span");
+  leftSpan.className = "raw-line-text raw-line-text--left-sign";
+  leftSpan.textContent = headerText.leftSign || "";
+  leftSpan.contentEditable = "true";
+  leftSpan.dataset.placeholder = "· empty — drop here ·";
+  leftSpan.title = "Click to edit left signature";
+  leftSpan.addEventListener("blur", () => {
+    const value = leftSpan.textContent.trim();
     if (headerText.leftSign !== value) {
       headerText.leftSign = value;
       refreshDotMatrixRawPreview();
     }
   });
-  container.appendChild(left);
+  container.appendChild(leftSpan);
 
-  const right = document.createElement("span");
-  right.className = "raw-line-text raw-line-text--right";
-  right.textContent = headerText.rightSign || "";
-  right.contentEditable = "true";
-  right.dataset.placeholder = "· empty — drop here ·";
-  right.title = "Click to edit";
-  right.addEventListener("blur", () => {
-    const value = right.textContent.trim();
+  const rightSpan = document.createElement("span");
+  rightSpan.className = "raw-line-text raw-line-text--right-sign";
+  rightSpan.textContent = headerText.rightSign || "";
+  rightSpan.contentEditable = "true";
+  rightSpan.dataset.placeholder = "· empty — drop here ·";
+  rightSpan.title = "Click to edit right signature";
+  rightSpan.addEventListener("blur", () => {
+    const value = rightSpan.textContent.trim();
     if (headerText.rightSign !== value) {
       headerText.rightSign = value;
       refreshDotMatrixRawPreview();
     }
   });
-  container.appendChild(right);
+  container.appendChild(rightSpan);
 }
 
 function renderEditableWeightBoxHeader(container) {
@@ -2815,6 +3070,23 @@ function renderFieldRowChips(container, blockId) {
     chip.dataset.blockId = blockId;
     chip.dataset.fieldId = field.id;
 
+    if (field.fontFamily) {
+      chip.style.fontFamily = `"${field.fontFamily}", monospace`;
+    }
+    if (field.fontSize) {
+      chip.style.fontSize = `${field.fontSize}pt`;
+    }
+    if (field.fontWeight) {
+      chip.style.fontWeight = String(field.fontWeight);
+    }
+    if (field.textColor) {
+      chip.style.color = field.textColor;
+    }
+
+    if (printerState.selectedRawFieldId === field.id && printerState.selectedRawBlockId === blockId) {
+      chip.classList.add("is-selected");
+    }
+
     if (field.kind === "text") {
       const text = document.createElement("span");
       text.className = "raw-field-chip__text";
@@ -2840,6 +3112,11 @@ function renderFieldRowChips(container, blockId) {
       value.textContent = sampleFieldDisplayValue(field.source);
       chip.appendChild(value);
     }
+
+    chip.addEventListener("click", event => {
+      if (event.target.closest(".raw-field-chip__remove") || event.target.closest(".raw-field-chip__handle")) return;
+      selectRawField(blockId, field.id);
+    });
 
     const handle = document.createElement("span");
     handle.className = "raw-field-chip__handle";
@@ -3363,6 +3640,9 @@ async function loadPrinterLayout() {
 async function savePrinterLayout() {
   if (!printerState.layout) return;
 
+  const currentType = currentPrinterType();
+  const currentName = printerState.currentLayoutName || printerState.activeLayoutName || printerState.layout?.name || (currentType === "dot_matrix" ? "Dot Matrix Default" : "A4 Default 1");
+
   try {
     const response = await fetch(printerLayoutApiUrl, {
       method: "POST",
@@ -3370,8 +3650,8 @@ async function savePrinterLayout() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        layoutName: printerState.currentLayoutName || printerState.activeLayoutName,
-        printerType: currentPrinterType(),
+        layoutName: currentName,
+        printerType: currentType,
         layout: printerState.layout,
       }),
     });
@@ -3382,9 +3662,9 @@ async function savePrinterLayout() {
     }
 
     applyPrinterLayoutResponse(result);
-    showToast(result.message || "Printer layout saved");
+    showToast(result.message || `Printer layout ${currentName} saved successfully`, "success");
   } catch (error) {
-    showToast(error.message || "Failed to save printer layout");
+    showToast(error.message || "Failed to save printer layout", "error");
   }
 }
 
@@ -3436,8 +3716,14 @@ printerControls.addButtons.forEach(button => {
   button.addEventListener("dragend", handleAddTileDragEnd);
 });
 
-printerControls.duplicateButton?.addEventListener("click", duplicateSelectedElement);
-printerControls.deleteButton?.addEventListener("click", deleteSelectedElement);
+printerControls.deleteButton?.addEventListener("click", () => {
+  if (currentPrinterType() === "dot_matrix" && printerState.selectedRawBlockId && printerState.selectedRawFieldId) {
+    removeFieldRowPiece(printerState.selectedRawBlockId, printerState.selectedRawFieldId);
+    clearSelection();
+    return;
+  }
+  deleteSelectedElement();
+});
 
 printerControls.resetButton?.addEventListener("click", () => {
   if (!printerState.defaultLayout) return;
@@ -3611,6 +3897,10 @@ printerControls.fieldRowsManager?.addEventListener("change", event => {
 printerControls.inspector?.addEventListener("input", event => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) return;
+  if (target.dataset.rawFieldProp) {
+    updateSelectedRawFieldProperty(target);
+    return;
+  }
   if (target.dataset.weightMetaSource) {
     if (!updateSelectedWeightMetaSource(target)) return;
     renderInspector();
@@ -3632,6 +3922,10 @@ printerControls.inspector?.addEventListener("input", event => {
 printerControls.inspector?.addEventListener("change", event => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) return;
+  if (target.dataset.rawFieldProp) {
+    updateSelectedRawFieldProperty(target);
+    return;
+  }
   if (target.dataset.weightMetaSource) {
     if (!updateSelectedWeightMetaSource(target)) return;
     renderInspector();

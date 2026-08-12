@@ -526,20 +526,77 @@ def generate_dot_matrix_raw_lines(entry_data, layout=None, line_width=80, feed_m
 
 
 def escp_font_select_command(layout):
-    """Map the layout's chosen font family to the closest ESC/P print-quality command.
-
-    Raw ESC/P text can only select the printer's own built-in fonts (Draft vs
-    NLQ) — it can't render an arbitrary TrueType family the way the on-screen
-    Visual Editor preview does. "Dot Matrix Draft" (or nothing set) selects
-    Draft; any other chosen font selects NLQ, the closer-to-letter-quality mode.
-    """
+    """Map the layout's chosen font family, weight, and size/CPI to ESC/P commands for the dot matrix printer."""
+    cmd = bytearray()
     font_family = ""
+    font_weight = 400
+    cpi = 10
+
     if isinstance(layout, dict):
         defaults = layout.get("defaults")
         if isinstance(defaults, dict):
             font_family = str(defaults.get("fontFamily") or "").strip()
+            font_weight = int(defaults.get("fontWeight") or 400)
+            cpi = int(defaults.get("cpi") or 10)
+        sections = layout.get("managedSections") or []
+        for s in sections:
+            rows = s.get("rows") or []
+            for r in rows:
+                if not font_family and r.get("fontFamily"):
+                    font_family = str(r.get("fontFamily")).strip()
+                if font_weight == 400 and r.get("fontWeight"):
+                    font_weight = int(r.get("fontWeight"))
+                if cpi == 10 and r.get("cpi"):
+                    cpi = int(r.get("cpi"))
+                for f in r.get("fields") or []:
+                    if not font_family and f.get("fontFamily"):
+                        font_family = str(f.get("fontFamily")).strip()
+                    if font_weight == 400 and f.get("fontWeight"):
+                        font_weight = int(f.get("fontWeight"))
+                    if cpi == 10 and f.get("cpi"):
+                        cpi = int(f.get("cpi"))
 
     is_draft = font_family in ("", "Dot Matrix Draft")
-    return bytes([0x1B, 0x78, 0x00 if is_draft else 0x01])
+    # ESC x: Draft (0) vs NLQ (1)
+    cmd.extend([0x1B, 0x78, 0x00 if is_draft else 0x01])
+
+    # Font family selection via ESC k (0=Roman, 1=Sans, 2=Courier)
+    if not is_draft:
+        lower_fam = font_family.lower()
+        if any(c in lower_fam for c in ("courier", "consolas", "lucida", "mono")):
+            cmd.extend([0x1B, 0x6B, 0x02])  # Courier
+        elif any(s in lower_fam for s in ("arial", "calibri", "verdana", "tahoma", "trebuchet", "sans", "blok")):
+            cmd.extend([0x1B, 0x6B, 0x01])  # Sans Serif
+        else:
+            cmd.extend([0x1B, 0x6B, 0x00])  # Roman
+
+    # Font Weight: ESC E (Emphasized/Bold ON) / ESC F (OFF) or ESC G (Double-strike)
+    if font_weight >= 700:
+        cmd.extend([0x1B, 0x45])  # ESC E (Emphasized ON)
+        if font_weight >= 900:
+            cmd.extend([0x1B, 0x47])  # ESC G (Double-strike ON)
+    else:
+        cmd.extend([0x1B, 0x46])  # ESC F (Emphasized OFF)
+        cmd.extend([0x1B, 0x48])  # ESC H (Double-strike OFF)
+
+    # Character Pitch (CPI):
+    if cpi <= 5:
+        cmd.extend([0x1B, 0x57, 0x01])  # ESC W 1 (Expanded / Double-Wide ON - 5 CPI)
+        cmd.extend([0x1B, 0x50])        # ESC P (10 CPI base * 2 = 5 CPI)
+    elif cpi == 12:
+        cmd.extend([0x1B, 0x57, 0x00])  # ESC W 0 (Expanded OFF)
+        cmd.extend([0x1B, 0x4D])        # ESC M (12 CPI Elite)
+    elif cpi == 15:
+        cmd.extend([0x1B, 0x57, 0x00])  # ESC W 0 (Expanded OFF)
+        cmd.extend([0x1B, 0x67])        # ESC g (15 CPI)
+    elif cpi >= 17:
+        cmd.extend([0x1B, 0x57, 0x00])  # ESC W 0 (Expanded OFF)
+        cmd.extend([0x0F])              # SI (17/20 CPI Condensed)
+    else:
+        cmd.extend([0x1B, 0x57, 0x00])  # ESC W 0 (Expanded OFF)
+        cmd.extend([0x12])              # DC2 (Cancel condensed)
+        cmd.extend([0x1B, 0x50])        # ESC P (10 CPI Standard)
+
+    return bytes(cmd)
 
 

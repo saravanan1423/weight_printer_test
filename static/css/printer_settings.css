@@ -1345,7 +1345,23 @@ body.printer-editor-fullscreen {
   background: rgba(74, 222, 128, 0.1);
   border: 1px solid rgba(74, 222, 128, 0.35);
   border-radius: 5px;
-  padding: 3px 8px 3px 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.raw-field-chip:hover {
+  background: rgba(74, 222, 128, 0.18);
+  border-color: rgba(74, 222, 128, 0.6);
+}
+
+.raw-field-chip.is-selected {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.45);
+}
+
+.raw-grid-row.is-selected {
+  background: rgba(56, 189, 248, 0.08);
 }
 
 .raw-field-chip.is-dragging {
