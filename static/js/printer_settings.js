@@ -82,12 +82,10 @@ const printerControls = {
   rawExtraLines: document.querySelector("#rawExtraLines"),
   rawSet6Inch: document.querySelector("#rawSet6Inch"),
   rawSendFf: document.querySelector("#rawSendFf"),
-  rawRefreshBtn: document.querySelector("#rawRefreshBtn"),
   rawDirectPrintBtn: document.querySelector("#rawDirectPrintBtn"),
-  rawAdvancePaperBtn: document.querySelector("#rawAdvancePaperBtn"),
-  rawLinesBadge: document.querySelector("#rawLinesBadge"),
-  rawContentCountMeta: document.querySelector("#rawContentCountMeta"),
-  rawPreviewConsole: document.querySelector("#rawPreviewConsole"),
+  rawTotalLines: document.querySelector("#rawTotalLines"),
+  rawPreviewGrid: document.querySelector("#rawPreviewGrid"),
+  rawAddFieldSource: document.querySelector("#rawAddFieldSource"),
 };
 
 const printerState = {
@@ -814,6 +812,11 @@ function renderQuickAddControls() {
     printerControls.quickAddPhotoSource,
     photoOptions,
     printerControls.quickAddPhotoSource?.value || photoOptions[0]?.key || "camera:1"
+  );
+  populateSelect(
+    printerControls.rawAddFieldSource,
+    fieldOptions,
+    printerControls.rawAddFieldSource?.value || fieldOptions[0]?.key || "serialNo"
   );
 
   const isLocked = currentTemplateIsLocked();
@@ -2455,11 +2458,675 @@ async function loadWindowsPrintersList() {
   }
 }
 
+let rawGridDragBlockId = null;
+let rawPaletteDragKind = null;
+let rawChipDragFieldId = null;
+let rawChipDragBlockId = null;
+
+function flattenedDotMatrixFieldRows() {
+  const sections = [...managedSections()].sort((a, b) => Number(a.y || 0) - Number(b.y || 0));
+  const result = [];
+  sections.forEach(section => {
+    (section.rows || []).forEach(row => result.push({ section, row }));
+  });
+  return result;
+}
+
+function fieldRowAtBlockId(blockId) {
+  const match = /^field-row-(\d+)$/.exec(blockId || "");
+  if (!match) return null;
+  return flattenedDotMatrixFieldRows()[Number(match[1])] || null;
+}
+
+function sampleFieldDisplayValue(source) {
+  // Quick-glance hint on the chip itself so you can tell what's bound where
+  // while editing. The actual line preview/print below always uses real
+  // ticket data (or blank) — this sample value never reaches the printed line.
+  if (!source) return "…";
+  const entry = printerState.sampleEntry || {};
+  const raw = source.startsWith("custom:") ? entry.customFields?.[source.slice(7)] : entry[source];
+  return raw === undefined || raw === null || raw === "" ? "…" : String(raw);
+}
+
+function createManagedTextField(row, text = "") {
+  const defaultFontFamily = printerState.layout?.defaults?.fontFamily || DOT_MATRIX_DEFAULT_FONT_FAMILY;
+  return {
+    id: nextFieldRowFieldId(row),
+    kind: "text",
+    text,
+    fontSize: 8,
+    cpi: 10,
+    fontFamily: defaultFontFamily,
+    textColor: "#000000",
+  };
+}
+
+const RAW_HEADER_TEXT_BLOCK_KEYS = {
+  "header-company-name": "companyName",
+  "header-company-subtitle": "companySubtitle",
+  "header-company-contact": "companyContact",
+  "doc-title": "docTitle",
+  "remarks": "remarksText",
+};
+
+const RAW_DIVIDER_BLOCK_IDS = ["divider-top", "divider-mid", "divider-pre-weight", "divider-post-weight"];
+const RAW_OPTIONAL_STRUCTURAL_BLOCK_IDS = [...RAW_DIVIDER_BLOCK_IDS, "weight-box", "net-in-words"];
+
+function renderRawPreviewGrid(lines, lineBlocks) {
+  const grid = printerControls.rawPreviewGrid;
+  if (!grid) return;
+
+  grid.innerHTML = "";
+  const blockLineCounters = {};
+  (lines || []).forEach((text, index) => {
+    const blockId = (lineBlocks || [])[index] || null;
+    const blockLineIndex = blockId ? (blockLineCounters[blockId] || 0) : 0;
+    if (blockId) blockLineCounters[blockId] = blockLineIndex + 1;
+
+    const row = document.createElement("div");
+    row.className = "raw-grid-row";
+    row.dataset.line = String(index + 1);
+    row.dataset.blockId = blockId || "";
+
+    const num = document.createElement("span");
+    num.className = "raw-grid-row__num";
+    num.textContent = String(index + 1).padStart(2, "0");
+    row.appendChild(num);
+
+    const content = document.createElement("div");
+    let isFieldRow = false;
+    if (blockId && blockId.startsWith("field-row-")) {
+      isFieldRow = true;
+      content.className = "raw-grid-row__content raw-grid-row__content--chips";
+      renderFieldRowChips(content, blockId);
+    } else if (blockId && RAW_HEADER_TEXT_BLOCK_KEYS[blockId]) {
+      content.className = "raw-grid-row__content raw-grid-row__content--editable-line";
+      renderEditableHeaderLine(content, blockId);
+    } else if (blockId === "signatures" && blockLineIndex === 2) {
+      content.className = "raw-grid-row__content raw-grid-row__content--editable-line";
+      renderEditableSignatureLine(content);
+    } else if (blockId === "weight-box" && blockLineIndex === 0) {
+      content.className = "raw-grid-row__content raw-grid-row__content--editable-line";
+      renderEditableWeightBoxHeader(content);
+    } else if (blockId && text.trim()) {
+      content.className = "raw-grid-row__content";
+      content.dataset.blockId = blockId;
+      content.draggable = true;
+      content.textContent = text;
+      content.addEventListener("dragstart", handleRawGridDragStart);
+      content.addEventListener("dragend", handleRawGridDragEnd);
+    } else if (blockId) {
+      // Occupied by a block (e.g. weight box, net-in-words) with nothing to
+      // show yet — still draggable to relocate, but reads the same as a
+      // genuinely free slot so the whole preview looks consistently empty.
+      content.className = "raw-grid-row__content raw-grid-row__content--empty";
+      content.dataset.blockId = blockId;
+      content.draggable = true;
+      content.textContent = "· empty — drop here ·";
+      content.addEventListener("dragstart", handleRawGridDragStart);
+      content.addEventListener("dragend", handleRawGridDragEnd);
+    } else {
+      content.className = "raw-grid-row__content raw-grid-row__content--empty";
+      content.textContent = "· empty — drop here ·";
+    }
+    row.appendChild(content);
+
+    const isHeaderTextBlock = blockId && RAW_HEADER_TEXT_BLOCK_KEYS[blockId];
+    const isSignatureBlock = blockId === "signatures" && (blockLineIndex === 0 || blockLineIndex === 2);
+    const isRemovableStructuralBlock = blockId && RAW_OPTIONAL_STRUCTURAL_BLOCK_IDS.includes(blockId) && blockLineIndex === 0;
+    if (isFieldRow || isRemovableStructuralBlock || isHeaderTextBlock || isSignatureBlock) {
+      const removeLine = document.createElement("button");
+      removeLine.type = "button";
+      removeLine.className = "raw-grid-row__remove-line";
+      removeLine.textContent = "🗑";
+      removeLine.title = "Remove this entire line";
+      removeLine.addEventListener("click", event => {
+        event.stopPropagation();
+        if (isFieldRow) {
+          removeFieldRowEntirely(blockId);
+        } else if (isHeaderTextBlock) {
+          removeRawHeaderTextBlock(blockId);
+        } else if (isSignatureBlock) {
+          removeRawSignatureBlock();
+        } else {
+          removeStructuralBlock(blockId);
+        }
+      });
+      row.appendChild(removeLine);
+    }
+
+    row.addEventListener("dragover", handleRawGridDragOver);
+    row.addEventListener("dragleave", handleRawGridDragLeave);
+    row.addEventListener("drop", handleRawGridDrop);
+    grid.appendChild(row);
+  });
+}
+
+function removeRawHeaderTextBlock(blockId) {
+  const key = RAW_HEADER_TEXT_BLOCK_KEYS[blockId];
+  if (key && printerState.layout?.rawHeaderText) {
+    printerState.layout.rawHeaderText[key] = "";
+  }
+  if (printerState.layout?.rawBlockPositions) {
+    delete printerState.layout.rawBlockPositions[blockId];
+  }
+  refreshDotMatrixRawPreview();
+}
+
+function removeRawSignatureBlock() {
+  if (printerState.layout?.rawHeaderText) {
+    printerState.layout.rawHeaderText.leftSign = "";
+    printerState.layout.rawHeaderText.rightSign = "";
+  }
+  if (printerState.layout?.rawBlockPositions) {
+    delete printerState.layout.rawBlockPositions["signatures"];
+  }
+  refreshDotMatrixRawPreview();
+}
+
+function ensureRawHeaderText() {
+  if (!printerState.layout) return {};
+  printerState.layout.rawHeaderText = printerState.layout.rawHeaderText || {};
+  return printerState.layout.rawHeaderText;
+}
+
+function ensureRawStructuralBlocks() {
+  if (!printerState.layout) return [];
+  if (!Array.isArray(printerState.layout.rawStructuralBlocks)) {
+    if (printerState.layout.templateKind === "blank_canvas") {
+      printerState.layout.rawStructuralBlocks = [];
+    } else {
+      // Was unspecified (meaning "everything on") — materialize the full set so
+      // adding/removing one block doesn't silently change the others.
+      printerState.layout.rawStructuralBlocks = [...RAW_OPTIONAL_STRUCTURAL_BLOCK_IDS];
+    }
+  }
+  return printerState.layout.rawStructuralBlocks;
+}
+
+function addStructuralBlockAt(kind, targetLine) {
+  if (!printerState.layout) return;
+  const blocks = ensureRawStructuralBlocks();
+  printerState.layout.rawBlockPositions = printerState.layout.rawBlockPositions || {};
+
+  if (kind === "weightBox") {
+    ["weight-box", "net-in-words"].forEach(id => {
+      if (!blocks.includes(id)) blocks.push(id);
+    });
+    printerState.layout.rawBlockPositions["weight-box"] = targetLine;
+  } else {
+    const nextDivider = RAW_DIVIDER_BLOCK_IDS.find(id => !blocks.includes(id));
+    if (!nextDivider) {
+      showToast("All divider lines are already on the ticket");
+      return;
+    }
+    blocks.push(nextDivider);
+    printerState.layout.rawBlockPositions[nextDivider] = targetLine;
+  }
+}
+
+function removeStructuralBlock(blockId) {
+  if (!printerState.layout) return;
+  const blocks = ensureRawStructuralBlocks();
+  const index = blocks.indexOf(blockId);
+  if (index !== -1) blocks.splice(index, 1);
+  if (blockId === "weight-box") {
+    const netIndex = blocks.indexOf("net-in-words");
+    if (netIndex !== -1) blocks.splice(netIndex, 1);
+  }
+  if (printerState.layout.rawBlockPositions) {
+    delete printerState.layout.rawBlockPositions[blockId];
+  }
+  refreshDotMatrixRawPreview();
+}
+
+function renderEditableHeaderLine(container, blockId) {
+  const key = RAW_HEADER_TEXT_BLOCK_KEYS[blockId];
+  const headerText = ensureRawHeaderText();
+  container.classList.toggle("raw-grid-row__content--empty", !(headerText[key] || "").trim());
+
+  const handle = document.createElement("span");
+  handle.className = "raw-line-handle";
+  handle.draggable = true;
+  handle.textContent = "⠿";
+  handle.title = "Drag to move this line elsewhere on the ticket";
+  handle.dataset.blockId = blockId;
+  handle.addEventListener("dragstart", handleRawGridDragStart);
+  handle.addEventListener("dragend", handleRawGridDragEnd);
+  container.appendChild(handle);
+
+  const text = document.createElement("span");
+  text.className = "raw-line-text";
+  text.textContent = headerText[key] || "";
+  text.contentEditable = "true";
+  text.dataset.placeholder = "· empty — drop here ·";
+  text.title = "Click to edit";
+  text.addEventListener("blur", () => {
+    const value = text.textContent.trim();
+    if (headerText[key] !== value) {
+      headerText[key] = value;
+      refreshDotMatrixRawPreview();
+    }
+  });
+  container.appendChild(text);
+}
+
+function renderEditableSignatureLine(container) {
+  const headerText = ensureRawHeaderText();
+  container.classList.toggle("raw-grid-row__content--empty", !(headerText.leftSign || "").trim() && !(headerText.rightSign || "").trim());
+
+  const handle = document.createElement("span");
+  handle.className = "raw-line-handle";
+  handle.draggable = true;
+  handle.textContent = "⠿";
+  handle.title = "Drag to move the signature line elsewhere on the ticket";
+  handle.dataset.blockId = "signatures";
+  handle.addEventListener("dragstart", handleRawGridDragStart);
+  handle.addEventListener("dragend", handleRawGridDragEnd);
+  container.appendChild(handle);
+
+  const left = document.createElement("span");
+  left.className = "raw-line-text";
+  left.textContent = headerText.leftSign || "";
+  left.contentEditable = "true";
+  left.dataset.placeholder = "· empty — drop here ·";
+  left.title = "Click to edit";
+  left.addEventListener("blur", () => {
+    const value = left.textContent.trim();
+    if (headerText.leftSign !== value) {
+      headerText.leftSign = value;
+      refreshDotMatrixRawPreview();
+    }
+  });
+  container.appendChild(left);
+
+  const right = document.createElement("span");
+  right.className = "raw-line-text raw-line-text--right";
+  right.textContent = headerText.rightSign || "";
+  right.contentEditable = "true";
+  right.dataset.placeholder = "· empty — drop here ·";
+  right.title = "Click to edit";
+  right.addEventListener("blur", () => {
+    const value = right.textContent.trim();
+    if (headerText.rightSign !== value) {
+      headerText.rightSign = value;
+      refreshDotMatrixRawPreview();
+    }
+  });
+  container.appendChild(right);
+}
+
+function renderEditableWeightBoxHeader(container) {
+  const headerText = ensureRawHeaderText();
+  const isBlank = !(headerText.grossLabel || "").trim() && !(headerText.tareLabel || "").trim() && !(headerText.netLabel || "").trim();
+  container.classList.toggle("raw-grid-row__content--empty", isBlank);
+
+  const handle = document.createElement("span");
+  handle.className = "raw-line-handle";
+  handle.draggable = true;
+  handle.textContent = "⠿";
+  handle.title = "Drag to move the weight box elsewhere on the ticket";
+  handle.dataset.blockId = "weight-box";
+  handle.addEventListener("dragstart", handleRawGridDragStart);
+  handle.addEventListener("dragend", handleRawGridDragEnd);
+  container.appendChild(handle);
+
+  [
+    { key: "grossLabel", extraClass: "" },
+    { key: "tareLabel", extraClass: "" },
+    { key: "netLabel", extraClass: "" },
+  ].forEach(({ key, extraClass }) => {
+    const span = document.createElement("span");
+    span.className = `raw-line-text raw-line-text--weight${extraClass ? ` ${extraClass}` : ""}`;
+    span.textContent = headerText[key] || "";
+    span.contentEditable = "true";
+    span.dataset.placeholder = "· empty — drop here ·";
+    span.title = "Click to edit";
+    span.addEventListener("blur", () => {
+      const value = span.textContent.trim();
+      if (headerText[key] !== value) {
+        headerText[key] = value;
+        refreshDotMatrixRawPreview();
+      }
+    });
+    container.appendChild(span);
+  });
+}
+
+function resolvedFieldColumn(field, index, totalFields, lineWidth) {
+  if (Number.isFinite(field.col)) return field.col;
+  const defaultColWidth = Math.max(10, Math.floor(lineWidth / Math.max(1, totalFields)));
+  return index * defaultColWidth;
+}
+
+function renderFieldRowChips(container, blockId) {
+  const target = fieldRowAtBlockId(blockId);
+  const fields = target?.row?.fields || [];
+  const lineWidth = Number(printerControls.rawLineWidth?.value || 80);
+
+  container.innerHTML = "";
+  container.dataset.blockId = blockId;
+  container.style.width = `${lineWidth}ch`;
+  fields.forEach((field, index) => {
+    const chip = document.createElement("span");
+    chip.className = "raw-field-chip";
+    chip.style.left = `${resolvedFieldColumn(field, index, fields.length, lineWidth)}ch`;
+    chip.dataset.blockId = blockId;
+    chip.dataset.fieldId = field.id;
+
+    if (field.kind === "text") {
+      const text = document.createElement("span");
+      text.className = "raw-field-chip__text";
+      text.textContent = field.text || "";
+      text.contentEditable = "true";
+      text.draggable = false;
+      text.dataset.placeholder = "type text…";
+      text.title = "Click to edit this text";
+      text.addEventListener("blur", () => commitFieldChipText(blockId, field.id, text.textContent));
+      chip.appendChild(text);
+    } else {
+      const label = document.createElement("span");
+      label.className = "raw-field-chip__label";
+      label.textContent = field.label || "";
+      label.contentEditable = "true";
+      label.draggable = false;
+      label.title = "Click to rename this field (clear it to print the value alone)";
+      label.addEventListener("blur", () => commitFieldChipLabel(blockId, field.id, label.textContent));
+      chip.appendChild(label);
+
+      const value = document.createElement("span");
+      value.className = "raw-field-chip__value";
+      value.textContent = sampleFieldDisplayValue(field.source);
+      chip.appendChild(value);
+    }
+
+    const handle = document.createElement("span");
+    handle.className = "raw-field-chip__handle";
+    handle.draggable = true;
+    handle.textContent = "⠿";
+    handle.title = "Drag to adjust spacing around this field";
+    handle.dataset.blockId = blockId;
+    handle.dataset.fieldId = field.id;
+    handle.addEventListener("dragstart", handleFieldChipDragStart);
+    handle.addEventListener("dragend", handleFieldChipDragEnd);
+    chip.appendChild(handle);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "raw-field-chip__remove";
+    remove.textContent = "×";
+    remove.title = "Remove";
+    remove.addEventListener("click", event => {
+      event.stopPropagation();
+      removeFieldRowPiece(blockId, field.id);
+    });
+    chip.appendChild(remove);
+
+    container.appendChild(chip);
+  });
+
+  container.addEventListener("dragover", handleFieldChipContainerDragOver);
+  container.addEventListener("drop", handleFieldChipContainerDrop);
+}
+
+function columnFromClientX(referenceEl, clientX) {
+  const rect = referenceEl.getBoundingClientRect();
+  const totalChars = Number(printerControls.rawLineWidth?.value || 80);
+  if (!rect.width) return 0;
+  const ratio = (clientX - rect.left) / rect.width;
+  return Math.max(0, Math.min(totalChars - 1, Math.round(ratio * totalChars)));
+}
+
+function commitFieldChipText(blockId, fieldId, text) {
+  const target = fieldRowAtBlockId(blockId);
+  const field = (target?.row?.fields || []).find(item => item.id === fieldId);
+  if (field && field.text !== text.trim()) {
+    field.text = text.trim();
+    refreshDotMatrixRawPreview();
+  }
+}
+
+function commitFieldChipLabel(blockId, fieldId, label) {
+  const target = fieldRowAtBlockId(blockId);
+  const field = (target?.row?.fields || []).find(item => item.id === fieldId);
+  if (field && field.label !== label.trim()) {
+    field.label = label.trim();
+    refreshDotMatrixRawPreview();
+  }
+}
+
+function deleteDotMatrixFieldRow(rowIndex) {
+  const target = flattenedDotMatrixFieldRows()[rowIndex];
+  if (!target || !printerState.layout) return;
+
+  target.section.rows = (target.section.rows || []).filter(row => row.id !== target.row.id);
+  if (target.section.rows.length === 0) {
+    printerState.layout.managedSections = managedSections().filter(section => section.id !== target.section.id);
+  }
+  reindexRawFieldRowPositions(rowIndex);
+
+  renderFieldRowsManager();
+  refreshDotMatrixRawPreview();
+}
+
+function removeFieldRowEntirely(blockId) {
+  const match = /^field-row-(\d+)$/.exec(blockId || "");
+  if (!match) return;
+  deleteDotMatrixFieldRow(Number(match[1]));
+}
+
+function removeFieldRowPiece(blockId, fieldId) {
+  const match = /^field-row-(\d+)$/.exec(blockId || "");
+  if (!match || !printerState.layout) return;
+  const rowIndex = Number(match[1]);
+  const target = flattenedDotMatrixFieldRows()[rowIndex];
+  if (!target) return;
+
+  target.row.fields = (target.row.fields || []).filter(field => field.id !== fieldId);
+
+  if (target.row.fields.length === 0) {
+    deleteDotMatrixFieldRow(rowIndex);
+    return;
+  }
+
+  renderFieldRowsManager();
+  refreshDotMatrixRawPreview();
+}
+
+function reindexRawFieldRowPositions(removedIndex) {
+  const positions = printerState.layout?.rawBlockPositions;
+  if (!positions) return;
+  const updated = {};
+  Object.entries(positions).forEach(([key, value]) => {
+    const match = /^field-row-(\d+)$/.exec(key);
+    if (!match) {
+      updated[key] = value;
+      return;
+    }
+    const index = Number(match[1]);
+    if (index === removedIndex) return;
+    updated[`field-row-${index > removedIndex ? index - 1 : index}`] = value;
+  });
+  printerState.layout.rawBlockPositions = updated;
+}
+
+function handleFieldChipDragStart(event) {
+  event.stopPropagation();
+  rawGridDragBlockId = null;
+  rawPaletteDragKind = null;
+  rawChipDragFieldId = event.currentTarget.dataset.fieldId;
+  rawChipDragBlockId = event.currentTarget.dataset.blockId;
+  event.currentTarget.closest(".raw-field-chip")?.classList.add("is-dragging");
+  event.dataTransfer.effectAllowed = "move";
+  try {
+    event.dataTransfer.setData("text/plain", rawChipDragFieldId);
+  } catch (err) {
+    // Some browsers restrict setData outside real drag gestures; ignore.
+  }
+}
+
+function handleFieldChipDragEnd(event) {
+  event.currentTarget.closest(".raw-field-chip")?.classList.remove("is-dragging");
+  printerControls.rawPreviewGrid?.querySelectorAll(".raw-grid-row__content--chips.is-drop-target").forEach(node => {
+    node.classList.remove("is-drop-target");
+  });
+  rawChipDragFieldId = null;
+  rawChipDragBlockId = null;
+}
+
+function handleFieldChipContainerDragOver(event) {
+  if (!rawChipDragFieldId || event.currentTarget.dataset.blockId !== rawChipDragBlockId) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.classList.add("is-drop-target");
+}
+
+function handleFieldChipContainerDrop(event) {
+  if (!rawChipDragFieldId || event.currentTarget.dataset.blockId !== rawChipDragBlockId) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.classList.remove("is-drop-target");
+
+  const target = fieldRowAtBlockId(rawChipDragBlockId);
+  const field = (target?.row?.fields || []).find(item => item.id === rawChipDragFieldId);
+  if (!field) return;
+
+  field.col = columnFromClientX(event.currentTarget, event.clientX);
+
+  renderFieldRowsManager();
+  refreshDotMatrixRawPreview();
+}
+
+function handleRawGridDragStart(event) {
+  rawPaletteDragKind = null;
+  rawGridDragBlockId = event.currentTarget.dataset.blockId;
+  event.dataTransfer.effectAllowed = "move";
+  printerControls.rawPreviewGrid?.querySelectorAll(`[data-block-id="${rawGridDragBlockId}"]`).forEach(node => {
+    node.closest(".raw-grid-row")?.classList.add("is-dragging");
+  });
+  try {
+    event.dataTransfer.setData("text/plain", rawGridDragBlockId);
+  } catch (err) {
+    // Some browsers restrict setData outside real drag gestures; ignore.
+  }
+}
+
+function handleRawGridDragEnd() {
+  printerControls.rawPreviewGrid?.querySelectorAll(".raw-grid-row").forEach(node => {
+    node.classList.remove("is-dragging", "is-drop-target");
+  });
+  rawGridDragBlockId = null;
+}
+
+function handleRawGridDragOver(event) {
+  if (rawChipDragFieldId) return;
+  if (!rawGridDragBlockId && !rawPaletteDragKind) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = rawPaletteDragKind ? "copy" : "move";
+  event.currentTarget.classList.add("is-drop-target");
+}
+
+function handleRawGridDragLeave(event) {
+  event.currentTarget.classList.remove("is-drop-target");
+}
+
+function handleRawGridDrop(event) {
+  if (rawChipDragFieldId) return;
+  event.preventDefault();
+  event.currentTarget.classList.remove("is-drop-target");
+
+  const targetLine = Number(event.currentTarget.dataset.line);
+  if (!printerState.layout || !targetLine) return;
+
+  printerState.layout.rawBlockPositions = printerState.layout.rawBlockPositions || {};
+  const existingBlockId = event.currentTarget.dataset.blockId || "";
+
+  if (rawGridDragBlockId) {
+    printerState.layout.rawBlockPositions[rawGridDragBlockId] = targetLine;
+  } else if (rawPaletteDragKind === "field" || rawPaletteDragKind === "text") {
+    if (existingBlockId.startsWith("field-row-")) {
+      const contentEl = event.currentTarget.querySelector(".raw-grid-row__content");
+      const dropCol = contentEl ? columnFromClientX(contentEl, event.clientX) : undefined;
+      addPieceToFieldRow(existingBlockId, rawPaletteDragKind, dropCol);
+    } else {
+      addRawFieldBlockAt(targetLine, rawPaletteDragKind);
+    }
+  } else if (rawPaletteDragKind === "divider" || rawPaletteDragKind === "weightBox") {
+    addStructuralBlockAt(rawPaletteDragKind, targetLine);
+  } else {
+    return;
+  }
+
+  rawGridDragBlockId = null;
+  rawPaletteDragKind = null;
+  refreshDotMatrixRawPreview();
+}
+
+function dotMatrixFieldRowCount() {
+  return managedSections().reduce(
+    (count, section) => count + (Array.isArray(section.rows) ? section.rows.length : 0),
+    0
+  );
+}
+
+function addPieceToFieldRow(blockId, kind, col) {
+  const target = fieldRowAtBlockId(blockId);
+  if (!target) return;
+  target.row.fields = target.row.fields || [];
+  if (target.row.fields.length >= 6) {
+    showToast("Maximum 6 items per line");
+    return;
+  }
+  const field = kind === "text"
+    ? createManagedTextField(target.row)
+    : createManagedRowField(target.row, printerControls.rawAddFieldSource?.value || printerState.fieldOptions?.[0]?.key || "serialNo");
+  if (Number.isFinite(col)) field.col = col;
+  target.row.fields.push(field);
+  renderFieldRowsManager();
+}
+
+function addRawFieldBlockAt(targetLine, kind) {
+  if (!printerState.layout) return;
+  const row = { id: nextFieldRowId(), fields: [] };
+  if (kind === "text") {
+    row.fields.push(createManagedTextField(row));
+  } else {
+    const source = printerControls.rawAddFieldSource?.value || printerState.fieldOptions?.[0]?.key || "serialNo";
+    row.fields.push(createManagedRowField(row, source));
+  }
+
+  printerState.layout.managedSections = managedSections();
+  printerState.layout.managedSections.push(createDotMatrixRowSection(row));
+
+  const rowIndex = dotMatrixFieldRowCount() - 1;
+  printerState.layout.rawBlockPositions[`field-row-${rowIndex}`] = targetLine;
+
+  renderFieldRowsManager();
+}
+
+function handleRawPaletteDragStart(event) {
+  rawGridDragBlockId = null;
+  rawPaletteDragKind = event.currentTarget.dataset.rawPaletteKind;
+  event.currentTarget.classList.add("is-dragging");
+  event.dataTransfer.effectAllowed = "copy";
+  try {
+    event.dataTransfer.setData("text/plain", rawPaletteDragKind);
+  } catch (err) {
+    // Some browsers restrict setData outside real drag gestures; ignore.
+  }
+}
+
+function handleRawPaletteDragEnd(event) {
+  event.currentTarget.classList.remove("is-dragging");
+  rawPaletteDragKind = null;
+}
+
 async function refreshDotMatrixRawPreview() {
-  if (!printerControls.rawPreviewConsole) return;
+  if (!printerControls.rawPreviewGrid) return;
   const feedMode = printerControls.rawFeedMode?.value || "auto_40";
   const extraLines = Number(printerControls.rawExtraLines?.value || 2);
   const lineWidth = Number(printerControls.rawLineWidth?.value || 80);
+  const totalLines = Number(printerControls.rawTotalLines?.value || 40);
 
   if (printerControls.rawExtraLinesField) {
     printerControls.rawExtraLinesField.style.display = feedMode === "custom" ? "block" : "none";
@@ -2467,12 +3134,16 @@ async function refreshDotMatrixRawPreview() {
 
   try {
     const payload = {
-      entry: printerState.sampleEntry || {},
+      // RAW Studio is a design surface, not a live ticket — preview with a blank
+      // entry so nothing shown here is ever fabricated demo data. Direct print
+      // (performDirectRawPrint) still uses the real entry when one is loaded.
+      entry: {},
       layout: printerState.layout || null,
       layoutName: printerState.currentLayoutName || printerState.activeLayoutName || "",
       feedMode,
       extraLines,
       lineWidth,
+      totalLines,
     };
 
     const response = await fetch("/settings/api/printer/preview-raw-lines", {
@@ -2483,13 +3154,7 @@ async function refreshDotMatrixRawPreview() {
     const data = await response.json();
 
     if (response.ok && data.success) {
-      printerControls.rawPreviewConsole.textContent = data.previewText || "";
-      if (printerControls.rawLinesBadge) {
-        printerControls.rawLinesBadge.textContent = `Printed: ${data.contentLines} lines | Extra Feed: ${data.blankLines} | Total Feed: ${data.totalLines} lines (6.7 in)`;
-      }
-      if (printerControls.rawContentCountMeta) {
-        printerControls.rawContentCountMeta.textContent = `${data.contentLines} Content Lines | ${data.blankLines} Blank Lines | Total ${data.totalLines} Lines`;
-      }
+      renderRawPreviewGrid(data.lines, data.lineBlocks);
     }
   } catch (err) {
     console.error("Failed to preview raw lines", err);
@@ -2501,6 +3166,7 @@ async function performDirectRawPrint() {
   const feedMode = printerControls.rawFeedMode?.value || "auto_40";
   const extraLines = Number(printerControls.rawExtraLines?.value || 2);
   const lineWidth = Number(printerControls.rawLineWidth?.value || 80);
+  const totalLines = Number(printerControls.rawTotalLines?.value || 40);
   const sendEscpInit = printerControls.rawSet6Inch?.checked !== false;
   const sendFormFeed = printerControls.rawSendFf?.checked === true;
 
@@ -2511,12 +3177,15 @@ async function performDirectRawPrint() {
 
   try {
     const payload = {
-      entry: printerState.sampleEntry || {},
+      // No entry is loaded from this design screen, so print with a blank
+      // ticket rather than fabricated demo data landing on real paper.
+      entry: {},
       layoutName: printerState.currentLayoutName || printerState.activeLayoutName || "",
       printerName,
       feedMode,
       extraLines,
       lineWidth,
+      totalLines,
       sendEscpInit,
       sendFormFeed,
     };
@@ -2538,27 +3207,8 @@ async function performDirectRawPrint() {
   } finally {
     if (printerControls.rawDirectPrintBtn) {
       printerControls.rawDirectPrintBtn.disabled = false;
-      printerControls.rawDirectPrintBtn.textContent = "🖨️ 2. Direct RAW Line Print";
+      printerControls.rawDirectPrintBtn.textContent = "🖨️ Direct RAW Line Print";
     }
-  }
-}
-
-async function performAdvancePaper() {
-  const printerName = printerControls.rawPrinterSelect?.value || "";
-  try {
-    const response = await fetch("/settings/api/printer/advance-paper", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ printerName, lines: 6 })
-    });
-    const data = await response.json();
-    if (data.success) {
-      showToast("Advanced paper by 6 lines", "success");
-    } else {
-      showToast(data.message || "Advance paper failed", "warning");
-    }
-  } catch (err) {
-    showToast("Failed to send paper advance command", "error");
   }
 }
 
@@ -3030,12 +3680,16 @@ window.addEventListener("keydown", event => {
 
 printerControls.tabVisualEditor?.addEventListener("click", () => setViewMode("visual"));
 printerControls.tabDotMatrixRaw?.addEventListener("click", () => setViewMode("raw"));
-printerControls.rawRefreshBtn?.addEventListener("click", refreshDotMatrixRawPreview);
 printerControls.rawFeedMode?.addEventListener("change", refreshDotMatrixRawPreview);
 printerControls.rawExtraLines?.addEventListener("input", refreshDotMatrixRawPreview);
 printerControls.rawLineWidth?.addEventListener("input", refreshDotMatrixRawPreview);
+printerControls.rawTotalLines?.addEventListener("input", refreshDotMatrixRawPreview);
 printerControls.rawDirectPrintBtn?.addEventListener("click", performDirectRawPrint);
-printerControls.rawAdvancePaperBtn?.addEventListener("click", performAdvancePaper);
+
+document.querySelectorAll(".raw-palette-tile[data-raw-palette-kind]").forEach(tile => {
+  tile.addEventListener("dragstart", handleRawPaletteDragStart);
+  tile.addEventListener("dragend", handleRawPaletteDragEnd);
+});
 
 loadPrinterLayout().catch(error => {
   showToast(error.message || "Failed to load printer layout");

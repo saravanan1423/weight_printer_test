@@ -80,7 +80,6 @@
                 <div class="raw-studio-card">
                   <div class="raw-studio-header">
                     <h3>🖨️ Dot Matrix Hardware &amp; Line-by-Line Direct RAW Print Controls</h3>
-                    <div class="raw-lines-badge" id="rawLinesBadge">Total Feed: 40 lines (6.7 in)</div>
                   </div>
 
                   <div class="raw-controls-grid">
@@ -95,7 +94,7 @@
                     <label class="printer-field raw-field-span-2">
                       <span>Printer Stop Mode</span>
                       <select id="rawFeedMode">
-                        <option value="auto_40" selected>Auto-Pad to 40 Lines (19 Content + 21 Blank Lines - Default)</option>
+                        <option value="auto_40" selected>Auto-Pad to Total Lines (Default)</option>
                         <option value="stop_0">Stop Immediately After Last Line (0 Extra Lines)</option>
                         <option value="auto_36">Auto-Pad to 36 Lines (6-Inch Perforation)</option>
                         <option value="custom">Feed Custom Extra Blank Lines</option>
@@ -119,18 +118,48 @@
                   </div>
 
                   <div class="raw-actions-row">
-                    <button type="button" class="btn btn-secondary" id="rawRefreshBtn">⚡ 1. Preview &amp; Refresh Lines</button>
-                    <button type="button" class="btn btn-primary" id="rawDirectPrintBtn">🖨️ 2. Direct RAW Line Print</button>
-                    <button type="button" class="btn btn-secondary" id="rawAdvancePaperBtn">📄 3. Advance to Perforation</button>
+                    <button type="button" class="btn btn-primary" id="rawDirectPrintBtn">🖨️ Direct RAW Line Print</button>
+                    <label class="printer-field raw-total-lines-field">
+                      <span>Total Lines</span>
+                      <input id="rawTotalLines" type="number" min="10" max="200" value="40">
+                    </label>
+                  </div>
+                </div>
+
+                <div class="raw-studio-card">
+                  <div class="raw-studio-header">
+                    <h3>🧩 Add New Content</h3>
+                  </div>
+                  <p class="raw-block-order-hint">Drag a tile onto any empty row in the preview below to add it there.</p>
+                  <div class="raw-palette-row">
+                    <div class="raw-palette-tile" draggable="true" data-raw-palette-kind="field">
+                      <strong>Field</strong>
+                      <span>Ticket value pair</span>
+                    </div>
+                    <label class="printer-field raw-palette-source">
+                      <span>Field Source</span>
+                      <select id="rawAddFieldSource"></select>
+                    </label>
+                    <div class="raw-palette-tile" draggable="true" data-raw-palette-kind="text">
+                      <strong>Text</strong>
+                      <span>Freeform line</span>
+                    </div>
+                    <div class="raw-palette-tile" draggable="true" data-raw-palette-kind="divider">
+                      <strong>Divider</strong>
+                      <span>Dashed line</span>
+                    </div>
+                    <div class="raw-palette-tile" draggable="true" data-raw-palette-kind="weightBox">
+                      <strong>Weight Box</strong>
+                      <span>Gross / Tare / Net</span>
+                    </div>
                   </div>
                 </div>
 
                 <div class="raw-preview-box">
                   <div class="raw-preview-box-head">
-                    <span>Live Dot Matrix Slip Preview (Exact Line-by-Line Numbering)</span>
-                    <span id="rawContentCountMeta">19 Content Lines | 21 Blank Lines</span>
+                    <span>Live Dot Matrix Slip Preview &mdash; Drag Any Row to Reposition It</span>
                   </div>
-                  <pre class="raw-preview-console" id="rawPreviewConsole"></pre>
+                  <div class="raw-preview-grid" id="rawPreviewGrid"></div>
                 </div>
               </div>
             </section>

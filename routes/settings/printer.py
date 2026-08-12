@@ -24,6 +24,16 @@ PRINTER_LAYOUT_SETTINGS_NAME = "__printer_layout_settings__"
 MAX_PRINTER_LAYOUT_NAME_LENGTH = 50
 DEFAULT_PRINTER_TYPE = "a4"
 PRINTER_LAYOUT_VERSION = 14
+DOT_MATRIX_RAW_GRID_SIZE = 40
+DOT_MATRIX_RAW_MAX_LINES = 200
+DOT_MATRIX_OPTIONAL_STRUCTURAL_BLOCKS = (
+    "divider-top",
+    "divider-mid",
+    "divider-pre-weight",
+    "divider-post-weight",
+    "weight-box",
+    "net-in-words",
+)
 PRINTER_TYPE_OPTIONS = (
     {
         "key": "a4",
@@ -1779,7 +1789,7 @@ def default_dot_matrix_printer_layout():
                 58.5,
                 100.0,
                 1.5,
-                "--------------------------------------------------------------------------------",
+                "",
                 font_size=10,
                 font_weight=700,
                 align="center",
@@ -1900,7 +1910,52 @@ def empty_a5_printer_layout():
 
 
 def empty_dot_matrix_printer_layout():
-    return default_dot_matrix_printer_layout()
+    config = printer_type_config("dot_matrix")
+    return {
+        "version": PRINTER_LAYOUT_VERSION,
+        "templateKind": "blank_canvas",
+        "printerType": "dot_matrix",
+        "page": {
+            "widthMm": config["page"]["widthMm"],
+            "heightMm": config["page"]["heightMm"],
+            "orientation": "landscape",
+            "backgroundColor": "#FFFFFF",
+            "borderColor": "transparent",
+            "borderWidth": 0,
+        },
+        "fieldRowsSettings": {
+            "x": 0.0,
+            "y": 22.0,
+            "w": 100.0,
+            "rowHeight": 5.8,
+            "baseRows": 0,
+            "shiftStartY": 22.0,
+        },
+        "fieldRows": [],
+        "managedSections": [
+            {
+                "id": "dot-matrix-empty-fields",
+                "name": "Ticket Fields",
+                "x": 0.0,
+                "y": 22.0,
+                "w": 100.0,
+                "rowHeight": 5.8,
+                "baseRows": 0,
+                "shiftStartY": 22.0,
+                "rows": [],
+            },
+        ],
+        "elements": [],
+        "defaults": {
+            "fontFamily": DEFAULT_DOT_MATRIX_FONT_FAMILY,
+        },
+        # Nothing is forced onto a blank-canvas ticket — no dividers, no weight
+        # box, no net-in-words — the RAW Studio grid starts completely empty
+        # and everything is built up by dragging content in.
+        "rawBlockPositions": {},
+        "rawHeaderText": {},
+        "rawStructuralBlocks": [],
+    }
 
 
 def second_default_a4_printer_layout(logo_image_url=""):
@@ -2421,18 +2476,41 @@ def normalize_kind(value, fallback):
 
 
 def normalize_field_row_field(field, valid_field_keys, row_index, field_index):
+    fallback_id = f"row-{row_index + 1}-field-{field_index + 1}"
+    raw_col = field.get("col")
+    normalized_col = None
+    if isinstance(raw_col, (int, float)) and not isinstance(raw_col, bool):
+        normalized_col = max(0, min(300, int(raw_col)))
+    common = {
+        "id": normalize_text(field.get("id"), fallback_id, max_length=60) or fallback_id,
+        "col": normalized_col,
+        "fontSize": normalize_int(field.get("fontSize"), 8, 6, 18),
+        "cpi": normalize_int(field.get("cpi"), 10, 5, 20),
+        "fontFamily": normalize_font_family(field.get("fontFamily"), DEFAULT_DOT_MATRIX_FONT_FAMILY),
+        "textColor": normalize_optional_color(field.get("textColor")),
+    }
+
+    if str(field.get("kind", "")) == "text":
+        return {
+            **common,
+            "kind": "text",
+            "label": "",
+            "source": "",
+            "text": normalize_text(field.get("text"), "", max_length=120),
+        }
+
     fallback_key = next((key for key in valid_field_keys if key), "serialNo")
     label_fallback = format_field_label(fallback_key) if fallback_key else f"Field {field_index + 1}"
     source = field.get("source")
     normalized_source = source if source in valid_field_keys else fallback_key
     return {
-        "id": normalize_text(field.get("id"), f"row-{row_index + 1}-field-{field_index + 1}", max_length=60) or f"row-{row_index + 1}-field-{field_index + 1}",
-        "label": normalize_text(field.get("label"), label_fallback, max_length=60) or label_fallback,
+        **common,
+        "kind": "data",
+        # An explicitly empty label (user cleared it to print the value alone)
+        # must be preserved as "" — only a genuinely absent label falls back.
+        "label": normalize_text(field.get("label"), label_fallback, max_length=60),
         "source": normalized_source,
-        "fontSize": normalize_int(field.get("fontSize"), 8, 6, 18),
-        "cpi": normalize_int(field.get("cpi"), 10, 5, 20),
-        "fontFamily": normalize_font_family(field.get("fontFamily"), DEFAULT_DOT_MATRIX_FONT_FAMILY),
-        "textColor": normalize_optional_color(field.get("textColor")),
+        "text": "",
     }
 
 
@@ -2901,6 +2979,32 @@ def normalize_printer_layout(layout, custom_columns, fallback_printer_type=DEFAU
                 defaults.get("defaults", {}).get("fontFamily", DEFAULT_DOT_MATRIX_FONT_FAMILY),
             ),
         } if printer_type == "dot_matrix" else {},
+        "rawBlockPositions": {
+            str(block_id): normalize_int(line_no, 1, 1, DOT_MATRIX_RAW_MAX_LINES)
+            for block_id, line_no in (layout.get("rawBlockPositions") if isinstance(layout.get("rawBlockPositions"), dict) else {}).items()
+            if isinstance(block_id, str) and isinstance(line_no, (int, float)) and not isinstance(line_no, bool)
+        } if printer_type == "dot_matrix" else {},
+        "rawHeaderText": {
+            key: normalize_text(
+                (layout.get("rawHeaderText") or {}).get(key) if isinstance(layout.get("rawHeaderText"), dict) else None,
+                "",
+                max_length=160,
+            )
+            for key in (
+                "companyName", "companySubtitle", "companyContact", "docTitle", "remarksText",
+                "leftSign", "rightSign", "grossLabel", "tareLabel", "netLabel",
+            )
+        } if printer_type == "dot_matrix" else {},
+        # None = unspecified on regular template, meaning "all enabled".
+        # For blank_canvas templates, unspecified defaults to [] (nothing enabled).
+        "rawStructuralBlocks": (
+            [
+                str(block_id) for block_id in layout.get("rawStructuralBlocks")
+                if block_id in DOT_MATRIX_OPTIONAL_STRUCTURAL_BLOCKS
+            ]
+            if isinstance(layout.get("rawStructuralBlocks"), list)
+            else ([] if layout.get("templateKind") == "blank_canvas" else None)
+        ) if printer_type == "dot_matrix" else None,
     }
 
 
@@ -3495,19 +3599,10 @@ def is_outdated_empty_dot_matrix_template_layout(layout):
         return True
     if normalize_text(layout.get("templateKind"), "", max_length=40) != "blank_canvas":
         return True
-    page = layout.get("page") if isinstance(layout.get("page"), dict) else {}
-    if not layout.get("elements") and int(page.get("borderWidth") or 0) != 0:
+    if layout.get("rawStructuralBlocks") != []:
         return True
-    sections = layout.get("managedSections") if isinstance(layout.get("managedSections"), list) else []
-    if sections:
-        first_section = sections[0] if isinstance(sections[0], dict) else {}
-        try:
-            section_x = float(first_section.get("x") or 0)
-            section_w = float(first_section.get("w") or 0)
-        except (TypeError, ValueError):
-            return True
-        if section_x != 0.0 or section_w != 100.0:
-            return True
+    if layout.get("fieldRows") or layout.get("elements"):
+        return True
     return False
 
 
@@ -4063,56 +4158,89 @@ def get_available_windows_printers():
     return printers
 
 
-def generate_dot_matrix_raw_lines(entry_data, layout=None, line_width=80, feed_mode="auto_40", extra_lines=2):
+def generate_dot_matrix_raw_lines(entry_data, layout=None, line_width=80, feed_mode="auto_40", extra_lines=2, total_lines=DOT_MATRIX_RAW_GRID_SIZE):
     """
     Generates exact monospace ASCII lines for Dot Matrix slip from weighment entry and layout.
-    Default: 19 content lines + 21 blank lines = 40 lines total (6-inch tractor fanfold paper).
+    Page length (total_lines) is user-configurable in RAW Studio; defaults to 40.
     """
     entry = entry_data or {}
     width = max(40, min(136, int(line_width or 80)))
-    lines = []
+    grid_size = max(10, min(DOT_MATRIX_RAW_MAX_LINES, int(total_lines or DOT_MATRIX_RAW_GRID_SIZE)))
 
-    company_name = "ABC WEIGHBRIDGE & LOGISTICS"
-    company_subtitle = "Industrial Area, Phase-II, Highway Road"
-    company_contact = "Phone: +91 98765 43210 | GSTIN: 33AAAAA0000A1Z5"
-    doc_title = "WEIGHMENT SLIP / RECEIPT"
-    remarks_text = "Goods received in good condition. Subject to local jurisdiction."
-    left_sign = "Left Thumb / Driver Sign"
-    right_sign = "Authorized Signatory"
-    net_in_words = ""
+    raw_positions = layout.get("rawBlockPositions") if isinstance(layout, dict) and isinstance(layout.get("rawBlockPositions"), dict) else {}
+    is_blank = (
+        layout.get("templateKind") == "blank_canvas"
+        if isinstance(layout, dict) else False
+    )
 
-    if isinstance(layout, dict):
+    # These free-text blocks are owned entirely by RAW Studio (layout["rawHeaderText"]),
+    # edited in place directly in the grid — never inherited from the Visual
+    # Editor's elements, so nothing here ever shows hardcoded demo text.
+    header_text = layout.get("rawHeaderText") if isinstance(layout, dict) and isinstance(layout.get("rawHeaderText"), dict) else {}
+    company_name = str(header_text.get("companyName") or "")
+    company_subtitle = str(header_text.get("companySubtitle") or "")
+    company_contact = str(header_text.get("companyContact") or "")
+    doc_title = str(header_text.get("docTitle") or "")
+    remarks_text = str(header_text.get("remarksText") or "")
+    left_sign = str(header_text.get("leftSign") or "")
+    right_sign = str(header_text.get("rightSign") or "")
+
+    # For non-blank templates without custom rawHeaderText, fall back to static text in elements
+    if not is_blank and isinstance(layout, dict):
+        elements_map = {}
         for el in layout.get("elements", []):
-            el_id = str(el.get("id", "")).lower()
-            text = str(el.get("text", "")).strip()
-            if not text:
-                continue
-            if "company-name" in el_id or "company_name" in el_id:
-                company_name = text
-            elif "company-address" in el_id or "company_subtitle" in el_id:
-                company_subtitle = text
-            elif "company-contact" in el_id or "company_contact" in el_id:
-                company_contact = text
-            elif "doc-title" in el_id or "ticket-title" in el_id:
-                doc_title = text
-            elif "footer-remarks" in el_id or "footer-note" in el_id:
-                remarks_text = text
-            elif "driver-sign" in el_id:
-                left_sign = text
-            elif "operator-sign" in el_id:
-                right_sign = text
+            if isinstance(el, dict) and el.get("id"):
+                elements_map[el["id"]] = el.get("text", "")
 
-    # 1. Header (Lines 1-6)
-    if company_name:
-        lines.append(company_name.upper()[:width].center(width))
-    if company_subtitle:
-        lines.append(company_subtitle[:width].center(width))
-    if company_contact:
-        lines.append(company_contact[:width].center(width))
-    lines.append("-" * width)
-    if doc_title:
-        lines.append(doc_title[:width].center(width))
-        lines.append("-" * width)
+        if not company_name:
+            company_name = elements_map.get("dot-company-name", "")
+        if not company_subtitle:
+            company_subtitle = elements_map.get("dot-company-address", "")
+        if not company_contact:
+            company_contact = elements_map.get("dot-company-contact", "")
+        if not doc_title:
+            doc_title = elements_map.get("dot-ticket-title", "")
+        if not remarks_text:
+            remarks_text = elements_map.get("dot-footer-remarks", "")
+        if not left_sign:
+            left_sign = elements_map.get("dot-driver-sign", "")
+        if not right_sign:
+            right_sign = elements_map.get("dot-operator-sign", "")
+
+    # Dividers, the weight box, and net-in-words are optional structural blocks:
+    # unspecified (None) means "all on" — the regular default template's
+    # long-standing look — but a blank-canvas template sets an explicit (often
+    # empty) list, so nothing is forced onto a from-scratch ticket.
+    structural_blocks = layout.get("rawStructuralBlocks") if isinstance(layout, dict) else None
+    if structural_blocks is None and is_blank:
+        structural_blocks = []
+
+    def is_structural_enabled(block_id):
+        return True if structural_blocks is None else block_id in structural_blocks
+
+    # Blocks are built independently, keyed by id, so they can be freely positioned
+    # anywhere on the 40-line ticket via layout["rawBlockPositions"] (drag-and-drop
+    # in RAW Studio) — unplaced blocks fall back to default_order top-to-bottom.
+    blocks = {}
+    default_order = []
+
+    def add_block(block_id, block_lines):
+        blocks[block_id] = list(block_lines)
+        default_order.append(block_id)
+
+    # 1. Header — only add if non-empty OR explicitly positioned on grid
+    if company_name.strip() or ("header-company-name" in raw_positions):
+        add_block("header-company-name", [company_name.upper()[:width].center(width)])
+    if company_subtitle.strip() or ("header-company-subtitle" in raw_positions):
+        add_block("header-company-subtitle", [company_subtitle[:width].center(width)])
+    if company_contact.strip() or ("header-company-contact" in raw_positions):
+        add_block("header-company-contact", [company_contact[:width].center(width)])
+    if is_structural_enabled("divider-top"):
+        add_block("divider-top", ["-" * width])
+    if doc_title.strip() or ("doc-title" in raw_positions):
+        add_block("doc-title", [doc_title[:width].center(width)])
+    if is_structural_enabled("divider-mid"):
+        add_block("divider-mid", ["-" * width])
 
     # 2. Key-Value Info Fields (dynamic rows, mirrors the Visual Editor's field rows exactly)
     def resolve_field_source_value(source):
@@ -4141,25 +4269,75 @@ def generate_dot_matrix_raw_lines(entry_data, layout=None, line_width=80, feed_m
                 return text
         return text
 
-    field_rows = layout.get("fieldRows") if isinstance(layout, dict) and isinstance(layout.get("fieldRows"), list) and layout.get("fieldRows") else default_dot_matrix_field_rows()
-    for row in field_rows:
+    def collect_dot_matrix_field_rows(layout):
+        # Each field row can live in its own managedSections entry (the Visual
+        # Editor positions rows independently by y), so fieldRows alone (which is
+        # only the first section) would silently drop any extra rows. An empty
+        # list here is a real, intentional "no field rows" state (e.g. the blank
+        # empty template) — it must NOT silently fall back to the hardcoded
+        # defaults; only a genuinely absent layout does that.
+        if isinstance(layout, dict):
+            sections = layout.get("managedSections")
+            if isinstance(sections, list):
+                ordered_sections = sorted(
+                    (section for section in sections if isinstance(section, dict)),
+                    key=lambda section: float(section.get("y") or 0),
+                )
+                return [
+                    row
+                    for section in ordered_sections
+                    for row in (section.get("rows") or [])
+                    if isinstance(row, dict)
+                ]
+            field_rows = layout.get("fieldRows")
+            if isinstance(field_rows, list):
+                return field_rows
+        return default_dot_matrix_field_rows()
+
+    def compose_row_line(fields, width):
+        # Each piece prints at its own explicit column (set by dragging it in RAW
+        # Studio), so spacing between pieces on a line is entirely up to the user —
+        # nothing here imposes an automatic gap. Pieces without an explicit column
+        # fall back to equal-width slots purely so a freshly added field has a
+        # sane starting position before the user drags it where they want it.
+        chars = [" "] * width
+        default_col_w = max(10, width // max(1, len(fields)))
+        for index, field in enumerate(fields):
+            if str(field.get("kind", "")) == "text":
+                text = str(field.get("text", "")).strip()
+            else:
+                label = str(field.get("label", "")).strip()
+                display_value = format_field_display_value(field.get("source"), resolve_field_source_value(field.get("source")))
+                text = f"{label}: {display_value}" if label else display_value
+
+            col = field.get("col")
+            if isinstance(col, (int, float)) and not isinstance(col, bool):
+                start = max(0, min(width - 1, int(col)))
+            else:
+                start = index * default_col_w
+
+            for offset, ch in enumerate(text):
+                pos = start + offset
+                if pos >= width:
+                    break
+                chars[pos] = ch
+
+        return "".join(chars)
+
+    field_rows = collect_dot_matrix_field_rows(layout)
+    for row_index, row in enumerate(field_rows):
         fields = row.get("fields") if isinstance(row, dict) else None
         if not fields:
+            add_block(f"field-row-{row_index}", [])
             continue
-        col_w = max(10, width // len(fields))
-        segments = []
-        for field in fields:
-            label = str(field.get("label", "")).strip()
-            display_value = format_field_display_value(field.get("source"), resolve_field_source_value(field.get("source")))
-            text = f"{label}: {display_value}" if label else display_value
-            segments.append(text[:col_w].ljust(col_w))
-        lines.append("".join(segments)[:width])
+        add_block(f"field-row-{row_index}", [compose_row_line(fields, width)])
 
-    # 3. Weights Box (dynamic labels/sources, mirrors the Visual Editor's weight-1/2/3 boxes)
+    # 3. Weights Box — the label text is owned by RAW Studio (layout["rawHeaderText"]),
+    # edited directly in the grid; no hardcoded demo labels/weights/times.
     weight_boxes = [
-        {"label": "Gross Weight", "source": "grossWeight", "timeSource": "grossTime", "fallback": "32450", "fallbackTime": "10:15 AM"},
-        {"label": "Tare Weight", "source": "tareWeight", "timeSource": "tareTime", "fallback": "12200", "fallbackTime": "11:45 AM"},
-        {"label": "Net Weight", "source": "netWeight", "timeSource": "", "fallback": "20250", "fallbackTime": ""},
+        {"label": str(header_text.get("grossLabel") or ""), "source": "grossWeight", "timeSource": "grossTime", "fallback": "", "fallbackTime": ""},
+        {"label": str(header_text.get("tareLabel") or ""), "source": "tareWeight", "timeSource": "tareTime", "fallback": "", "fallbackTime": ""},
+        {"label": str(header_text.get("netLabel") or ""), "source": "netWeight", "timeSource": "", "fallback": "", "fallbackTime": ""},
     ]
     if isinstance(layout, dict):
         elements_by_id = {
@@ -4171,16 +4349,14 @@ def generate_dot_matrix_raw_lines(entry_data, layout=None, line_width=80, feed_m
             el = elements_by_id.get(box_id)
             if not isinstance(el, dict):
                 continue
-            label = str(el.get("label", "")).strip()
-            if label:
-                weight_boxes[index]["label"] = label
             source = str(el.get("source", "")).strip()
             if source:
                 weight_boxes[index]["source"] = source
             meta_sources = el.get("metaSources")
             weight_boxes[index]["timeSource"] = str(meta_sources[0]) if isinstance(meta_sources, list) and meta_sources else ""
 
-    lines.append("-" * width)
+    if is_structural_enabled("divider-pre-weight"):
+        add_block("divider-pre-weight", ["-" * width])
 
     # 3 columns across line_width - 4 pipes
     col1_w = 25
@@ -4212,49 +4388,106 @@ def generate_dot_matrix_raw_lines(entry_data, layout=None, line_width=80, feed_m
         else:
             time_cells.append("".center(col_w))
 
-    lines.append("|" + "|".join(header_cells) + "|")
-    lines.append("|" + "|".join(value_cells) + "|")
-    lines.append("|" + "|".join(time_cells) + "|")
-    lines.append("-" * width)
+    if is_structural_enabled("weight-box"):
+        add_block(
+            "weight-box",
+            [
+                "|" + "|".join(header_cells) + "|",
+                "|" + "|".join(value_cells) + "|",
+                "|" + "|".join(time_cells) + "|",
+            ],
+        )
+    if is_structural_enabled("divider-post-weight"):
+        add_block("divider-post-weight", ["-" * width])
 
-    # 4. Net in Words (Line 15)
-    net_in_words = str(entry.get("netInWords") or entry.get("net_in_words") or "")
-    if not net_in_words and net:
-        net_in_words = number_to_words_inr(net)
-    if net_in_words:
-        clean_words = f"({net_in_words.strip()})" if not net_in_words.strip().startswith("(") else net_in_words.strip()
-        lines.append(clean_words[:width].center(width))
+    # 4. Net in Words (computed from the net weight — not free text)
+    if is_structural_enabled("net-in-words"):
+        net_in_words = str(entry.get("netInWords") or entry.get("net_in_words") or "")
+        if not net_in_words and net:
+            net_in_words = number_to_words_inr(net)
+        clean_words = ""
+        if net_in_words:
+            clean_words = f"({net_in_words.strip()})" if not net_in_words.strip().startswith("(") else net_in_words.strip()
+        add_block("net-in-words", [clean_words[:width].center(width)])
 
-    # 5. Remarks (Line 16)
-    if remarks_text:
-        clean_remarks = remarks_text if remarks_text.lower().startswith("remarks:") else f"Remarks: {remarks_text}"
-        lines.append(clean_remarks[:width])
+    # 5. Remarks — only add if non-empty OR explicitly positioned on grid
+    if remarks_text.strip() or ("remarks" in raw_positions):
+        add_block("remarks", [remarks_text[:width]])
 
-    # 6. Signatures (Lines 17-19)
-    lines.append("")
-    lines.append("")
-    sign_half = width // 2
-    sign_line = f"{left_sign[:sign_half].ljust(sign_half)}{right_sign[:sign_half].rjust(sign_half)}"
-    lines.append(sign_line)
+    # 6. Signatures — only add if non-empty OR explicitly positioned on grid
+    if (left_sign.strip() or right_sign.strip()) or ("signatures" in raw_positions):
+        sign_half = width // 2
+        sign_line = f"{left_sign[:sign_half].ljust(sign_half)}{right_sign[:sign_half].rjust(sign_half)}"
+        add_block("signatures", ["", "", sign_line])
 
-    # 7. Feeding and Page Padding (Lines 20-40)
-    content_count = len(lines)
-    final_lines = list(lines)
+    # 7. Place every block on the configurable-length grid (grid_size lines,
+    # default 40). Blocks the user has dragged to a specific row
+    # (layout["rawBlockPositions"]) land there — or at the nearest free run of
+    # rows if that spot collides with something else — so gaps left on purpose
+    # stay empty instead of being compacted away.
+    raw_positions = layout.get("rawBlockPositions") if isinstance(layout, dict) and isinstance(layout.get("rawBlockPositions"), dict) else {}
+    grid = [None] * grid_size
+    owners = [None] * grid_size
+    placed_lines = {}
+
+    def place_block(block_id, requested_line=None):
+        block_lines = blocks.get(block_id) or []
+        height = len(block_lines)
+        if height == 0 or height > grid_size:
+            return
+        start = 0
+        if requested_line:
+            start = max(0, min(grid_size - height, int(requested_line) - 1))
+        idx = start
+        while idx <= grid_size - height and any(grid[idx + offset] is not None for offset in range(height)):
+            idx += 1
+        if idx > grid_size - height:
+            idx = start - 1
+            while idx >= 0 and any(grid[idx + offset] is not None for offset in range(height)):
+                idx -= 1
+            if idx < 0:
+                return
+        for offset, text in enumerate(block_lines):
+            grid[idx + offset] = text
+            owners[idx + offset] = block_id
+        placed_lines[block_id] = idx + 1
+
+    explicit_ids = sorted(
+        (block_id for block_id in raw_positions if blocks.get(block_id)),
+        key=lambda block_id: (
+            float(raw_positions[block_id]) if isinstance(raw_positions[block_id], (int, float)) else 999,
+            default_order.index(block_id) if block_id in default_order else len(default_order),
+        ),
+    )
+    for block_id in explicit_ids:
+        place_block(block_id, raw_positions[block_id])
+
+    remaining_order = [block_id for block_id in default_order if block_id not in placed_lines]
+    remaining_order.extend(block_id for block_id in blocks if block_id not in placed_lines and block_id not in remaining_order)
+    for block_id in remaining_order:
+        place_block(block_id)
+
+    occupied_indexes = [index for index, value in enumerate(grid) if value is not None]
+    content_count = (max(occupied_indexes) + 1) if occupied_indexes else 0
+    grid_lines = ["" if value is None else value for value in grid]
 
     mode = str(feed_mode or "auto_40").lower()
-    if "40" in mode or mode == "auto_40":
-        if len(final_lines) < 40:
-            final_lines.extend([""] * (40 - len(final_lines)))
-    elif "36" in mode or mode == "auto_36":
-        if len(final_lines) < 36:
-            final_lines.extend([""] * (36 - len(final_lines)))
+    if "36" in mode or mode == "auto_36":
+        final_lines = grid_lines[:36]
+        final_owners = owners[:36]
+        content_count = min(content_count, 36)
+    elif "stop" in mode or mode == "stop_0":
+        final_lines = grid_lines[:content_count]
+        final_owners = owners[:content_count]
     elif "extra" in mode or mode == "custom":
         extra_count = max(0, min(30, int(extra_lines or 2)))
-        final_lines.extend([""] * extra_count)
-    elif "stop" in mode or mode == "stop_0":
-        pass  # 0 extra blank lines
+        final_lines = grid_lines[:content_count] + [""] * extra_count
+        final_owners = owners[:content_count] + [None] * extra_count
+    else:
+        final_lines = grid_lines
+        final_owners = owners
 
-    return content_count, final_lines
+    return content_count, final_lines, final_owners
 
 
 @settings_bp.route("/api/printer/windows-printers", methods=["GET"])
@@ -4276,6 +4509,7 @@ def preview_raw_lines():
     feed_mode = data.get("feedMode", "auto_40")
     extra_lines = int(data.get("extraLines", 2))
     line_width = int(data.get("lineWidth", 80))
+    total_lines = int(data.get("totalLines", DOT_MATRIX_RAW_GRID_SIZE))
 
     custom_columns = get_custom_field_column_names()
     live_layout = data.get("layout")
@@ -4284,7 +4518,7 @@ def preview_raw_lines():
     else:
         layout = get_saved_printer_layout(custom_columns, layout_name)
 
-    content_count, lines = generate_dot_matrix_raw_lines(entry, layout, line_width, feed_mode, extra_lines)
+    content_count, lines, line_blocks = generate_dot_matrix_raw_lines(entry, layout, line_width, feed_mode, extra_lines, total_lines)
 
     numbered_lines = []
     for i, line in enumerate(lines, 1):
@@ -4300,9 +4534,28 @@ def preview_raw_lines():
         "blankLines": len(lines) - content_count,
         "totalLines": len(lines),
         "lines": lines,
+        "lineBlocks": line_blocks,
         "numberedLines": numbered_lines,
         "previewText": "\n".join(numbered_lines),
     })
+
+
+def escp_font_select_command(layout):
+    """Map the layout's chosen font family to the closest ESC/P print-quality command.
+
+    Raw ESC/P text can only select the printer's own built-in fonts (Draft vs
+    NLQ) — it can't render an arbitrary TrueType family the way the on-screen
+    Visual Editor preview does. "Dot Matrix Draft" (or nothing set) selects
+    Draft; any other chosen font selects NLQ, the closer-to-letter-quality mode.
+    """
+    font_family = ""
+    if isinstance(layout, dict):
+        defaults = layout.get("defaults")
+        if isinstance(defaults, dict):
+            font_family = str(defaults.get("fontFamily") or "").strip()
+
+    is_draft = font_family in ("", "Dot Matrix Draft")
+    return bytes([0x1B, 0x78, 0x00 if is_draft else 0x01])
 
 
 @settings_bp.route("/api/printer/direct-raw-print", methods=["POST"])
@@ -4315,6 +4568,7 @@ def direct_raw_print():
     feed_mode = data.get("feedMode", "auto_40")
     extra_lines = int(data.get("extraLines", 2))
     line_width = int(data.get("lineWidth", 80))
+    total_lines = int(data.get("totalLines", DOT_MATRIX_RAW_GRID_SIZE))
     send_escp_init = bool(data.get("sendEscpInit", True))
     send_form_feed = bool(data.get("sendFormFeed", False))
 
@@ -4332,7 +4586,7 @@ def direct_raw_print():
             entry_data = serialize_weighment_row(entry_row)
 
     layout = get_saved_printer_layout(custom_columns, layout_name)
-    content_count, lines = generate_dot_matrix_raw_lines(entry_data, layout, line_width, feed_mode, extra_lines)
+    content_count, lines, _line_blocks = generate_dot_matrix_raw_lines(entry_data, layout, line_width, feed_mode, extra_lines, total_lines)
 
     text_body = "\r\n".join(lines) + "\r\n"
     raw_payload = bytearray()
@@ -4340,6 +4594,7 @@ def direct_raw_print():
     if send_escp_init:
         # ESC @ (Initialize) + ESC C 0 6 (Set page length to 6 inches)
         raw_payload.extend(b"\x1b@\x1b\x43\x00\x06")
+        raw_payload.extend(escp_font_select_command(layout))
 
     raw_payload.extend(text_body.encode("ascii", errors="replace"))
 
