@@ -426,7 +426,7 @@ function dotMatrixNextRowSectionY() {
     return Math.max(bottom, y + sectionHeight);
   }, 0);
 
-  return Number(clamp(lowestBottom > 0 ? lowestBottom + 2 : 0, 0, 92).toFixed(2));
+  return Number((lowestBottom > 0 ? lowestBottom + 2 : 8).toFixed(2));
 }
 
 function createDotMatrixRowSection(row) {
@@ -1230,8 +1230,9 @@ function addFieldRow(sectionId = managedSections()[0]?.id) {
   if (!currentTemplateAllowsEdits()) return;
   if (!printerState.layout) return;
 
-  if (totalManagedRowCount() >= 10) {
-    showToast("Maximum 10 rows allowed");
+  const maxRows = currentPrinterType() === "dot_matrix" ? 200 : 10;
+  if (totalManagedRowCount() >= maxRows) {
+    showToast(`Maximum ${maxRows} rows allowed`);
     return;
   }
 
@@ -3479,6 +3480,20 @@ printerControls.fullscreenPreviewButton?.addEventListener("click", openPrinterSa
 
 printerControls.deleteTemplateButton?.addEventListener("click", deletePrinterTemplate);
 printerControls.saveButton?.addEventListener("click", savePrinterLayout);
+printerControls.rawPrinterSelect?.addEventListener("change", async () => {
+  const printerName = printerControls.rawPrinterSelect.value;
+  if (!printerName) return;
+  try {
+    await fetch("/settings/api/printer/default-windows-printer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ printerName }),
+    });
+    showToast(`Default printer set to ${printerName}`, "success");
+  } catch (err) {
+    console.error("Failed to save default printer", err);
+  }
+});
 document.addEventListener("click", event => {
   const saveBlockButton = event.target.closest("[data-save-layout]");
   if (!saveBlockButton || saveBlockButton.disabled) return;

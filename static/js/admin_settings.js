@@ -1,14 +1,8 @@
 const adminSettingsApiUrl = "/settings/api/admin";
-const adminPrintersApiUrl = "/settings/api/admin/printers";
 const adminSettingsForm = document.querySelector("#adminSettingsForm");
 const resetSerialDailyInput = document.querySelector("#resetSerialDaily");
 const resendButtonEnabledInput = document.querySelector("#resendButtonEnabled");
 const liveWeightEnabledInput = document.querySelector("#liveWeightEnabled");
-const defaultPrinterNameInput = document.querySelector("#defaultPrinterName");
-const configuredPrinterTypeInput = document.querySelector("#configuredPrinterType");
-const directPrintEnabledInput = document.querySelector("#directPrintEnabled");
-const testPrinterButton = document.querySelector("#testPrinterButton");
-const printerTestStatus = document.querySelector("#printerTestStatus");
 const appVersionLabel = document.querySelector("#appVersion");
 const checkUpdateButton = document.querySelector("#checkUpdateButton");
 const applyUpdateButton = document.querySelector("#applyUpdateButton");
@@ -19,7 +13,6 @@ const adminSectionButtons = Array.from(document.querySelectorAll("[data-admin-se
 const adminPanels = Array.from(document.querySelectorAll("[data-admin-panel]"));
 const adminLinkButtons = Array.from(document.querySelectorAll("[data-admin-link]"));
 let updateStatusTimer = null;
-let availablePrinterNames = [];
 
 adminSectionButtons.forEach(button => {
   button.addEventListener("click", () => {
@@ -45,42 +38,7 @@ function applyAdminSettings(settings = {}) {
   resetSerialDailyInput.checked = Boolean(settings.resetSerialDaily);
   resendButtonEnabledInput.checked = settings.resendButtonEnabled !== false;
   liveWeightEnabledInput.checked = settings.liveWeightEnabled !== false;
-  populatePrinterDropdown(settings.defaultPrinterName || "Default Printer");
-  if (configuredPrinterTypeInput) configuredPrinterTypeInput.value = settings.configuredPrinterType || "dot_matrix";
-  if (directPrintEnabledInput) directPrintEnabledInput.checked = settings.directPrintEnabled !== false;
   appVersionLabel.textContent = settings.appVersion || "--";
-}
-
-function populatePrinterDropdown(selectedPrinter = "Default Printer") {
-  if (!defaultPrinterNameInput) return;
-  const selected = String(selectedPrinter || "Default Printer").trim() || "Default Printer";
-  const names = ["Default Printer", ...availablePrinterNames.filter(name => name && name !== "Default Printer")];
-  if (selected && !names.includes(selected)) {
-    names.push(selected);
-  }
-  defaultPrinterNameInput.innerHTML = "";
-  names.forEach(name => {
-    const option = document.createElement("option");
-    option.value = name;
-    option.textContent = name;
-    option.selected = name === selected;
-    defaultPrinterNameInput.appendChild(option);
-  });
-}
-
-async function loadWindowsPrinters() {
-  try {
-    const response = await fetch(adminPrintersApiUrl, { cache: "no-store" });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to load Windows printers");
-    }
-    availablePrinterNames = Array.isArray(result.printers) ? result.printers : [];
-    populatePrinterDropdown(result.defaultPrinterName || defaultPrinterNameInput?.value || "Default Printer");
-  } catch (error) {
-    populatePrinterDropdown(defaultPrinterNameInput?.value || "Default Printer");
-    showToast(error.message || "Failed to load Windows printers", "warning");
-  }
 }
 
 
@@ -132,7 +90,6 @@ function startUpdateStatusPolling() {
 
 
 async function loadAdminSettings() {
-  await loadWindowsPrinters();
   const response = await fetch(adminSettingsApiUrl);
   const result = await response.json().catch(() => ({}));
 
@@ -156,10 +113,7 @@ adminSettingsForm.addEventListener("submit", async event => {
       body: JSON.stringify({
         resetSerialDaily: resetSerialDailyInput.checked,
         resendButtonEnabled: resendButtonEnabledInput.checked,
-        liveWeightEnabled: liveWeightEnabledInput.checked,
-        defaultPrinterName: defaultPrinterNameInput?.value || "Default Printer",
-        configuredPrinterType: configuredPrinterTypeInput?.value || "dot_matrix",
-        directPrintEnabled: directPrintEnabledInput?.checked !== false
+        liveWeightEnabled: liveWeightEnabledInput.checked
       })
     });
     const result = await response.json().catch(() => ({}));
@@ -223,43 +177,4 @@ applyUpdateButton.addEventListener("click", async () => {
 
 loadAdminSettings().catch(error => {
   showToast(error.message || "Failed to load admin settings");
-});
-
-
-testPrinterButton?.addEventListener("click", async () => {
-  if (printerTestStatus) {
-    printerTestStatus.textContent = "Testing printer connection...";
-    printerTestStatus.classList.remove("error");
-  }
-
-  try {
-    const response = await fetch("/settings/api/admin/printer/test", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        defaultPrinterName: defaultPrinterNameInput?.value || "Default Printer",
-        configuredPrinterType: configuredPrinterTypeInput?.value || "dot_matrix",
-        directPrintEnabled: directPrintEnabledInput?.checked !== false
-      })
-    });
-    const result = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to test printer connection");
-    }
-
-    if (printerTestStatus) {
-      printerTestStatus.textContent = result.message || "Printer test succeeded!";
-      printerTestStatus.classList.remove("error");
-    }
-    showToast(result.message || "Printer test succeeded!", "success");
-  } catch (error) {
-    if (printerTestStatus) {
-      printerTestStatus.textContent = error.message || "Printer test failed.";
-      printerTestStatus.classList.add("error");
-    }
-    showToast(error.message || "Printer test failed.", "warning");
-  }
 });

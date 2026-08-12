@@ -79,9 +79,16 @@ def get_admin_setting_value(setting_key, default=""):
     return str(value)
 
 
+def _now_kolkata():
+    try:
+        return datetime.now(ZoneInfo("Asia/Kolkata"))
+    except Exception:
+        return datetime.now()
+
+
 def set_admin_setting_value(setting_key, value):
     ensure_admin_settings_schema()
-    now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    now = _now_kolkata()
     db.session.execute(
         text(
             f"""

@@ -47,46 +47,6 @@
                 </span>
               </label>
 
-              <div class="admin-update-card admin-printer-card">
-                <div>
-                  <strong>Printer Configuration & Auto-Print Settings</strong>
-                  <small>Set default printer, printer format type, and direct print behavior.</small>
-                </div>
-
-                <div class="admin-printer-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 6px;">
-                  <label class="admin-field" style="display: grid; gap: 4px;">
-                    <span style="font-weight: 750; font-size: 13px; color: var(--ink);">Default Printer Name (Windows Printers)</span>
-                    <select id="defaultPrinterName" style="height: 38px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font-weight: 700;">
-                      <option value="Default Printer">Loading Windows Printers...</option>
-                    </select>
-                  </label>
-
-                  <label class="admin-field" style="display: grid; gap: 4px;">
-                    <span style="font-weight: 750; font-size: 13px; color: var(--ink);">Configured Printer Format</span>
-                    <select id="configuredPrinterType" style="height: 38px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font-weight: 700;">
-                      <option value="dot_matrix">Dot Matrix Printer</option>
-                      <option value="a4">A4 Printer</option>
-                      <option value="a5">A5 Printer</option>
-                      <option value="thermal">Thermal Printer</option>
-                      <option value="pdf">PDF Printer (Save as PDF)</option>
-                    </select>
-                  </label>
-                </div>
-
-                <label class="admin-toggle" style="margin-top: 6px;">
-                  <input id="directPrintEnabled" type="checkbox">
-                  <span>
-                    <strong>Enable Direct Auto-Print (Skip Preview Screen)</strong>
-                    <small>If enabled, clicking Print automatically sends the ticket directly to the default printer without showing a print preview screen.</small>
-                  </span>
-                </label>
-
-                <div class="admin-update-actions" style="margin-top: 6px;">
-                  <button type="button" id="testPrinterButton">Test Connection & Print</button>
-                </div>
-                <p id="printerTestStatus" class="admin-update-status">Click 'Test Connection & Print' to test configured printer.</p>
-              </div>
-
               <div class="admin-update-card">
                 <div>
                   <strong>Network Auto Update</strong>

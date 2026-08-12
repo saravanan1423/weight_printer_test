@@ -137,9 +137,12 @@ def admin_settings_save():
     set_admin_setting_bool(RESET_SERIAL_DAILY_KEY, reset_serial_daily)
     set_admin_setting_bool(RESEND_BUTTON_ENABLED_KEY, resend_button_enabled)
     set_admin_setting_bool(LIVE_WEIGHT_ENABLED_KEY, live_weight_enabled)
-    set_admin_setting_value(DEFAULT_PRINTER_NAME_KEY, default_printer_name)
-    set_admin_setting_bool(DIRECT_PRINT_ENABLED_KEY, direct_print_enabled)
-    set_admin_setting_value(PRINTER_TYPE_KEY, configured_printer_type)
+    if "defaultPrinterName" in payload:
+        set_admin_setting_value(DEFAULT_PRINTER_NAME_KEY, str(payload.get("defaultPrinterName") or "").strip() or "Default Printer")
+    if "directPrintEnabled" in payload:
+        set_admin_setting_bool(DIRECT_PRINT_ENABLED_KEY, bool(payload.get("directPrintEnabled")))
+    if "configuredPrinterType" in payload:
+        set_admin_setting_value(PRINTER_TYPE_KEY, str(payload.get("configuredPrinterType") or "").strip() or "dot_matrix")
 
     return jsonify({
         "message": "Admin settings saved",
@@ -149,9 +152,9 @@ def admin_settings_save():
             "tareWeightEnabled": tare_weight_enabled,
             "resendButtonEnabled": resend_button_enabled,
             "liveWeightEnabled": live_weight_enabled,
-            "defaultPrinterName": default_printer_name,
-            "directPrintEnabled": direct_print_enabled,
-            "configuredPrinterType": configured_printer_type,
+            "defaultPrinterName": get_default_printer_name(),
+            "directPrintEnabled": get_direct_print_enabled(),
+            "configuredPrinterType": get_configured_printer_type(),
             "appVersion": APP_VERSION,
         },
     })
