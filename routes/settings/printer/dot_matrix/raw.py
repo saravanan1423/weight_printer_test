@@ -11,64 +11,25 @@ from ..common import (
 )
 from .layout import default_dot_matrix_field_rows
 
-def spool_raw_data_to_printer(printer_name, data_bytes, doc_title="Weighbridge Slip"):
-    """Spool raw byte payload directly to Windows printer using win32print or ctypes winspool."""
-    if not printer_name:
-        return False, "No printer name specified"
+def get_windows_default_printer():
     try:
         import win32print
-        hPrinter = win32print.OpenPrinter(printer_name)
-        try:
-            hJob = win32print.StartDocPrinter(hPrinter, 1, (doc_title, None, "RAW"))
-            try:
-                win32print.StartPagePrinter(hPrinter)
-                win32print.WritePrinter(hPrinter, data_bytes)
-                win32print.EndPagePrinter(hPrinter)
-            finally:
-                win32print.EndDocPrinter(hPrinter)
-        finally:
-            win32print.ClosePrinter(hPrinter)
-        return True, f"Print job sent to {printer_name}"
-    except ImportError:
-        try:
-            import ctypes
-            from ctypes import wintypes
-            winspool = ctypes.WinDLL("winspool.drv", use_last_error=True)
-            class DOC_INFO_1W(ctypes.Structure):
-                _fields_ = [
-                    ("pDocName", wintypes.LPWSTR),
-                    ("pOutputFile", wintypes.LPWSTR),
-                    ("pDatatype", wintypes.LPWSTR),
-                ]
-            h_printer = wintypes.HANDLE()
-            if not winspool.OpenPrinterW(printer_name, ctypes.byref(h_printer), None):
-                return False, f"Failed to open printer '{printer_name}'"
-            try:
-                doc_info = DOC_INFO_1W(doc_title, None, "RAW")
-                job_id = winspool.StartDocPrinterW(h_printer, 1, ctypes.byref(doc_info))
-                if not job_id:
-                    return False, f"Failed to start print doc on '{printer_name}'"
-                try:
-                    winspool.StartPagePrinter(h_printer)
-                    bytes_written = wintypes.DWORD(0)
-                    winspool.WritePrinter(
-                        h_printer,
-                        ctypes.c_char_p(data_bytes),
-                        len(data_bytes),
-                        ctypes.byref(bytes_written),
-                    )
-                    winspool.EndPagePrinter(h_printer)
-                finally:
-                    winspool.EndDocPrinter(h_printer)
-            finally:
-                winspool.ClosePrinter(h_printer)
-            return True, f"Print job sent to {printer_name}"
-        except Exception as e:
-            return False, str(e)
-    except Exception as e:
-        return False, str(e)
-
-
+        return win32print.GetDefaultPrinter()
+    except Exception:
+        pass
+    try:
+        import ctypes
+        from ctypes import wintypes
+        winspool = ctypes.WinDLL("winspool.drv", use_last_error=True)
+        buf_size = wintypes.DWORD(0)
+        winspool.GetDefaultPrinterW(None, ctypes.byref(buf_size))
+        if buf_size.value > 0:
+            buf = ctypes.create_unicode_buffer(buf_size.value)
+            if winspool.GetDefaultPrinterW(buf, ctypes.byref(buf_size)):
+                return buf.value
+    except Exception:
+        pass
+    return ""
 
 
 def get_available_windows_printers():
@@ -82,6 +43,33 @@ def get_available_windows_printers():
                 printers.append(name)
     except Exception:
         pass
+
+    if not printers:
+        try:
+            import ctypes
+            from ctypes import wintypes
+            winspool = ctypes.WinDLL("winspool.drv", use_last_error=True)
+            class PRINTER_INFO_4W(ctypes.Structure):
+                _fields_ = [
+                    ("pPrinterName", wintypes.LPWSTR),
+                    ("pServerName", wintypes.LPWSTR),
+                    ("Attributes", wintypes.DWORD),
+                ]
+            flags = 0x00000002 | 0x00000004
+            needed = wintypes.DWORD(0)
+            returned = wintypes.DWORD(0)
+            winspool.EnumPrintersW(flags, None, 4, None, 0, ctypes.byref(needed), ctypes.byref(returned))
+            if needed.value > 0:
+                buffer = ctypes.create_string_buffer(needed.value)
+                if winspool.EnumPrintersW(flags, None, 4, buffer, needed, ctypes.byref(needed), ctypes.byref(returned)):
+                    printers_struct = ctypes.cast(buffer, ctypes.POINTER(PRINTER_INFO_4W * returned.value)).contents
+                    for printer in printers_struct:
+                        name = str(printer.pPrinterName or "").strip()
+                        if name and name not in printers:
+                            printers.append(name)
+        except Exception:
+            pass
+
     if not printers:
         try:
             import subprocess
@@ -97,7 +85,108 @@ def get_available_windows_printers():
                     printers.append(line)
         except Exception:
             pass
-    return printers
+
+    return sorted(printers, key=str.casefold)
+
+
+def resolve_windows_printer_name(requested_name=None):
+    printers = get_available_windows_printers()
+    if not printers:
+        return str(requested_name or "").strip()
+
+    clean = str(requested_name or "").strip()
+    if clean and clean.lower() not in {"", "default printer", "default windows printer", "loading windows printers..."}:
+        for p in printers:
+            if p == clean:
+                return p
+        for p in printers:
+            if p.lower() == clean.lower():
+                return p
+        for p in printers:
+            if clean.lower() in p.lower() or p.lower() in clean.lower():
+                return p
+
+    win_def = get_windows_default_printer()
+    if win_def:
+        for p in printers:
+            if p.lower() == win_def.lower():
+                return p
+        return win_def
+
+    return printers[0] if printers else clean
+
+
+def _spool_raw_bytes(target_printer, data_bytes, doc_title):
+    raw_bytes = bytes(data_bytes)
+    try:
+        import win32print
+        hPrinter = win32print.OpenPrinter(target_printer)
+        try:
+            hJob = win32print.StartDocPrinter(hPrinter, 1, (doc_title, None, "RAW"))
+            try:
+                win32print.StartPagePrinter(hPrinter)
+                win32print.WritePrinter(hPrinter, raw_bytes)
+                win32print.EndPagePrinter(hPrinter)
+            finally:
+                win32print.EndDocPrinter(hPrinter)
+        finally:
+            win32print.ClosePrinter(hPrinter)
+        return True, f"Print job sent to {target_printer}"
+    except Exception as win32_err:
+        try:
+            import ctypes
+            from ctypes import wintypes
+            winspool = ctypes.WinDLL("winspool.drv", use_last_error=True)
+            class DOC_INFO_1W(ctypes.Structure):
+                _fields_ = [
+                    ("pDocName", wintypes.LPWSTR),
+                    ("pOutputFile", wintypes.LPWSTR),
+                    ("pDatatype", wintypes.LPWSTR),
+                ]
+            h_printer = wintypes.HANDLE()
+            if not winspool.OpenPrinterW(target_printer, ctypes.byref(h_printer), None):
+                err = ctypes.get_last_error()
+                return False, f"Failed to open printer '{target_printer}' (Error {err})"
+            try:
+                doc_info = DOC_INFO_1W(doc_title, None, "RAW")
+                job_id = winspool.StartDocPrinterW(h_printer, 1, ctypes.byref(doc_info))
+                if not job_id:
+                    err = ctypes.get_last_error()
+                    return False, f"Failed to start print doc on '{target_printer}' (Error {err})"
+                try:
+                    winspool.StartPagePrinter(h_printer)
+                    bytes_written = wintypes.DWORD(0)
+                    buf = (ctypes.c_char * len(raw_bytes)).from_buffer_copy(raw_bytes)
+                    ok = winspool.WritePrinter(h_printer, buf, len(raw_bytes), ctypes.byref(bytes_written))
+                    if not ok:
+                        err = ctypes.get_last_error()
+                        return False, f"Failed to write to printer '{target_printer}' (Error {err})"
+                    winspool.EndPagePrinter(h_printer)
+                finally:
+                    winspool.EndDocPrinter(h_printer)
+            finally:
+                winspool.ClosePrinter(h_printer)
+            return True, f"Print job sent to {target_printer}"
+        except Exception as e:
+            return False, str(e)
+
+
+def spool_raw_data_to_printer(printer_name, data_bytes, doc_title="Weighbridge Slip"):
+    """Spool raw byte payload directly to Windows printer with automatic name resolution and fallback."""
+    target_printer = resolve_windows_printer_name(printer_name)
+    if not target_printer:
+        return False, "No valid Windows printer found on this system"
+
+    success, message = _spool_raw_bytes(target_printer, data_bytes, doc_title)
+    if not success and target_printer != get_windows_default_printer():
+        # Fallback retry to system default
+        def_printer = get_windows_default_printer()
+        if def_printer and def_printer != target_printer:
+            retry_ok, retry_msg = _spool_raw_bytes(def_printer, data_bytes, doc_title)
+            if retry_ok:
+                return True, retry_msg, def_printer
+
+    return success, message, target_printer
 
 
 

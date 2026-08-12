@@ -328,13 +328,17 @@ def direct_raw_print():
 
     ticket_no = (entry_data or {}).get("serialNo") or (entry_data or {}).get("ticketNo") or ""
     doc_title = f"Weighment Slip #{ticket_no}" if ticket_no else "Weighment Slip"
-    success, message = spool_raw_data_to_printer(printer_name, payload, doc_title=doc_title)
+    res = spool_raw_data_to_printer(printer_name, payload, doc_title=doc_title)
+    success = res[0]
+    message = res[1]
+    actual_printer = res[2] if len(res) > 2 else printer_name
     if not success:
-        return jsonify({"success": False, "message": message}), 500
+        return jsonify({"success": False, "message": message, "printerName": actual_printer}), 500
 
     return jsonify({
         "success": True,
-        "message": f"Printed {content_count} content lines ({len(lines)} total) to {printer_name}",
+        "message": f"Printed {content_count} content lines ({len(lines)} total) to {actual_printer}",
+        "printerName": actual_printer,
         "linesCount": len(lines),
         "contentLines": content_count,
     })
@@ -349,12 +353,13 @@ def advance_paper():
     if not printer_name:
         from admin_config import get_default_printer_name
         printer_name = get_default_printer_name()
-    if not printer_name:
-        return jsonify({"success": False, "message": "No printer configured"}), 400
 
     payload = b"\r\n" * lines_to_advance
-    ok, msg = spool_raw_data_to_printer(printer_name, payload, doc_title="Advance Paper")
-    return jsonify({"success": ok, "message": msg})
+    res = spool_raw_data_to_printer(printer_name, payload, doc_title="Advance Paper")
+    ok = res[0]
+    msg = res[1]
+    actual_p = res[2] if len(res) > 2 else printer_name
+    return jsonify({"success": ok, "message": msg, "printerName": actual_p})
 
 
 @settings_bp.route("/printer")

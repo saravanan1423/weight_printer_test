@@ -12,6 +12,8 @@ from .raw import (
     escp_font_select_command,
     spool_raw_data_to_printer,
     get_available_windows_printers,
+    get_windows_default_printer,
+    resolve_windows_printer_name,
 )
 
 __all__ = [
@@ -26,4 +28,6 @@ __all__ = [
     "escp_font_select_command",
     "spool_raw_data_to_printer",
     "get_available_windows_printers",
+    "get_windows_default_printer",
+    "resolve_windows_printer_name",
 ]
