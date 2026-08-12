@@ -1159,11 +1159,15 @@ function renderFieldRowsManager() {
               <label class="printer-field">
                 <span>Pitch / CPI</span>
                 <select data-section-id="${section.id}" data-row-id="${row.id}" data-field-id="${field.id}" data-row-field-prop="cpi" ${isLocked ? "disabled" : ""}>
-                  <option value="5" ${field.cpi == 5 ? "selected" : ""}>5 CPI (Double-Wide / Expanded)</option>
-                  <option value="10" ${(field.cpi == 10 || !field.cpi) ? "selected" : ""}>10 CPI (Standard)</option>
-                  <option value="12" ${field.cpi == 12 ? "selected" : ""}>12 CPI (Elite)</option>
-                  <option value="15" ${field.cpi == 15 ? "selected" : ""}>15 CPI (Compressed)</option>
-                  <option value="17" ${field.cpi == 17 ? "selected" : ""}>17 CPI (Condensed)</option>
+                  <option value="5" ${field.cpi == 5 ? "selected" : ""}>5 CPI (Double-Wide 10)</option>
+                  <option value="6" ${field.cpi == 6 ? "selected" : ""}>6 CPI (Double-Wide 12)</option>
+                  <option value="7" ${field.cpi == 7 ? "selected" : ""}>7 CPI</option>
+                  <option value="8" ${field.cpi == 8 ? "selected" : ""}>8 CPI</option>
+                  <option value="9" ${field.cpi == 9 ? "selected" : ""}>9 CPI</option>
+                  <option value="10" ${(field.cpi == 10 || !field.cpi) ? "selected" : ""}>10 CPI (Standard 80 chars)</option>
+                  <option value="12" ${field.cpi == 12 ? "selected" : ""}>12 CPI (Elite 96 chars)</option>
+                  <option value="15" ${field.cpi == 15 ? "selected" : ""}>15 CPI (Compressed 120 chars)</option>
+                  <option value="17" ${field.cpi == 17 ? "selected" : ""}>17 CPI (Condensed 137 chars)</option>
                 </select>
               </label>
               <label class="printer-field">
@@ -1624,7 +1628,11 @@ function renderRawFieldInspector(rawSelection) {
       <label class="printer-field">
         <span>Pitch / Size (CPI)</span>
         <select data-raw-field-prop="cpi" ${isLocked ? "disabled" : ""}>
-          <option value="5" ${cpi == 5 ? "selected" : ""}>5 CPI (Double-Wide / Expanded)</option>
+          <option value="5" ${cpi == 5 ? "selected" : ""}>5 CPI (Double-Wide 10)</option>
+          <option value="6" ${cpi == 6 ? "selected" : ""}>6 CPI (Double-Wide 12)</option>
+          <option value="7" ${cpi == 7 ? "selected" : ""}>7 CPI</option>
+          <option value="8" ${cpi == 8 ? "selected" : ""}>8 CPI</option>
+          <option value="9" ${cpi == 9 ? "selected" : ""}>9 CPI</option>
           <option value="10" ${cpi == 10 ? "selected" : ""}>10 CPI (Standard 80 chars)</option>
           <option value="12" ${cpi == 12 ? "selected" : ""}>12 CPI (Elite 96 chars)</option>
           <option value="15" ${cpi == 15 ? "selected" : ""}>15 CPI (Compressed 120 chars)</option>

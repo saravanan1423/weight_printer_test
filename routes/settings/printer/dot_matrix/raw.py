@@ -583,6 +583,19 @@ def escp_font_select_command(layout):
     if cpi <= 5:
         cmd.extend([0x1B, 0x57, 0x01])  # ESC W 1 (Expanded / Double-Wide ON - 5 CPI)
         cmd.extend([0x1B, 0x50])        # ESC P (10 CPI base * 2 = 5 CPI)
+    elif cpi == 6:
+        cmd.extend([0x1B, 0x57, 0x01])  # ESC W 1 (Expanded ON - 6 CPI)
+        cmd.extend([0x1B, 0x4D])        # ESC M (12 CPI base * 2 = 6 CPI)
+    elif cpi == 7:
+        cmd.extend([0x1B, 0x57, 0x01])  # ESC W 1 (Expanded ON - 7.5 CPI)
+        cmd.extend([0x1B, 0x67])        # ESC g (15 CPI base * 2 = 7.5 CPI)
+    elif cpi == 8:
+        cmd.extend([0x1B, 0x57, 0x01])  # ESC W 1 (Expanded ON - 8.5 CPI)
+        cmd.extend([0x0F])              # SI (17 CPI base * 2 = 8.5 CPI)
+    elif cpi == 9:
+        cmd.extend([0x1B, 0x57, 0x00])  # ESC W 0 (Expanded OFF)
+        cmd.extend([0x1B, 0x20, 0x02])  # ESC SP 2 (Inter-character space)
+        cmd.extend([0x1B, 0x50])        # ESC P (10 CPI base)
     elif cpi == 12:
         cmd.extend([0x1B, 0x57, 0x00])  # ESC W 0 (Expanded OFF)
         cmd.extend([0x1B, 0x4D])        # ESC M (12 CPI Elite)
