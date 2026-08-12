@@ -191,19 +191,27 @@ def spool_raw_data_to_printer(printer_name, data_bytes, doc_title="Weighbridge S
 
 
 
-def generate_dot_matrix_raw_lines(entry_data, layout=None, line_width=80, feed_mode="auto_40", extra_lines=2, total_lines=DOT_MATRIX_RAW_GRID_SIZE):
+def generate_dot_matrix_raw_lines(entry_data, layout=None, line_width=None, feed_mode=None, extra_lines=None, total_lines=None):
     """
     Generates exact monospace ASCII lines for Dot Matrix slip from weighment entry and layout.
-    Page length (total_lines) is user-configurable in RAW Studio; defaults to 40.
+    Page length (total_lines) is user-configurable in RAW Studio; defaults to layout's saved total lines or 40.
     """
     entry = entry_data or {}
-    width = max(40, min(136, int(line_width or 80)))
-    grid_size = max(10, min(DOT_MATRIX_RAW_MAX_LINES, int(total_lines or DOT_MATRIX_RAW_GRID_SIZE)))
+    layout_obj = layout if isinstance(layout, dict) else {}
 
-    raw_positions = layout.get("rawBlockPositions") if isinstance(layout, dict) and isinstance(layout.get("rawBlockPositions"), dict) else {}
+    resolved_total_lines = total_lines if total_lines is not None else (layout_obj.get("rawTotalLines") or layout_obj.get("totalLines") or DOT_MATRIX_RAW_GRID_SIZE)
+    grid_size = max(10, min(DOT_MATRIX_RAW_MAX_LINES, int(resolved_total_lines)))
+
+    resolved_line_width = line_width if line_width is not None else (layout_obj.get("rawLineWidth") or 80)
+    width = max(40, min(136, int(resolved_line_width)))
+
+    feed_mode = feed_mode if feed_mode is not None else (layout_obj.get("rawFeedMode") or "auto_40")
+    extra_lines = extra_lines if extra_lines is not None else (layout_obj.get("rawExtraLines") or 2)
+
+    raw_positions = layout_obj.get("rawBlockPositions") if isinstance(layout_obj.get("rawBlockPositions"), dict) else {}
     is_blank = (
-        layout.get("templateKind") == "blank_canvas"
-        if isinstance(layout, dict) else False
+        layout_obj.get("templateKind") == "blank_canvas"
+        if isinstance(layout_obj, dict) else False
     )
 
     # These free-text blocks are owned entirely by RAW Studio (layout["rawHeaderText"]),

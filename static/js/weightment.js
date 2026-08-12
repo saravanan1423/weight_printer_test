@@ -3037,9 +3037,6 @@ document.querySelector("#printBtn").addEventListener("click", () => {
       entryId: (entryId && registeredReadOnly) ? entryId : null,
       entry: buildWeighmentPrintData(),
       printerName: activePrinterName || "",
-      feedMode: "auto_40",
-      lineWidth: 80,
-      sendEscpInit: true,
     };
     fetch("/settings/api/printer/direct-raw-print", {
       method: "POST",

@@ -247,18 +247,17 @@ def set_default_windows_printer():
 def preview_raw_lines():
     data = request.get_json(silent=True) or {}
     entry = data.get("entry")
-    layout_name = data.get("layoutName")
-    feed_mode = data.get("feedMode", "auto_40")
-    extra_lines = int(data.get("extraLines", 2))
-    line_width = int(data.get("lineWidth", 80))
-    total_lines = int(data.get("totalLines", DOT_MATRIX_RAW_GRID_SIZE))
-
     custom_columns = get_custom_field_column_names()
     live_layout = data.get("layout")
     if isinstance(live_layout, dict):
         layout = normalize_printer_layout(live_layout, custom_columns, "dot_matrix")
     else:
         layout = get_saved_printer_layout(custom_columns, layout_name)
+
+    feed_mode = data.get("feedMode") or layout.get("rawFeedMode") or "auto_40"
+    extra_lines = int(data.get("extraLines") if data.get("extraLines") is not None else (layout.get("rawExtraLines") if layout.get("rawExtraLines") is not None else 2))
+    line_width = int(data.get("lineWidth") or layout.get("rawLineWidth") or 80)
+    total_lines = int(data.get("totalLines") or layout.get("rawTotalLines") or layout.get("totalLines") or DOT_MATRIX_RAW_GRID_SIZE)
 
     content_count, lines, line_blocks = generate_dot_matrix_raw_lines(entry, layout, line_width, feed_mode, extra_lines, total_lines)
 
@@ -289,12 +288,6 @@ def direct_raw_print():
     entry_data = data.get("entry")
     layout_name = data.get("layoutName")
     printer_name = data.get("printerName")
-    feed_mode = data.get("feedMode", "auto_40")
-    extra_lines = int(data.get("extraLines", 2))
-    line_width = int(data.get("lineWidth", 80))
-    total_lines = int(data.get("totalLines", DOT_MATRIX_RAW_GRID_SIZE))
-    send_escp_init = bool(data.get("sendEscpInit", True))
-    send_form_feed = bool(data.get("sendFormFeed", False))
 
     if not printer_name:
         from admin_config import get_default_printer_name
@@ -308,6 +301,13 @@ def direct_raw_print():
         layout = normalize_printer_layout(live_layout, custom_columns, "dot_matrix")
     else:
         layout = get_saved_printer_layout(custom_columns, layout_name)
+
+    feed_mode = data.get("feedMode") or layout.get("rawFeedMode") or "auto_40"
+    extra_lines = int(data.get("extraLines") if data.get("extraLines") is not None else (layout.get("rawExtraLines") if layout.get("rawExtraLines") is not None else 2))
+    line_width = int(data.get("lineWidth") or layout.get("rawLineWidth") or 80)
+    total_lines = int(data.get("totalLines") or layout.get("rawTotalLines") or layout.get("totalLines") or DOT_MATRIX_RAW_GRID_SIZE)
+    send_escp_init = bool(data.get("sendEscpInit") if data.get("sendEscpInit") is not None else layout.get("rawSet6Inch", True))
+    send_form_feed = bool(data.get("sendFormFeed") if data.get("sendFormFeed") is not None else layout.get("rawSendFf", False))
 
     if not entry_data and entry_id:
         entry_row = fetch_weighment_by_id(entry_id)
@@ -339,6 +339,7 @@ def direct_raw_print():
         "success": True,
         "message": f"Printed {content_count} content lines ({len(lines)} total) to {actual_printer}",
         "printerName": actual_printer,
+        "totalLines": len(lines),
         "linesCount": len(lines),
         "contentLines": content_count,
     })
