@@ -2638,6 +2638,27 @@ function applyPrinterLayoutResponse(result) {
     setViewMode("visual");
   }
 
+  if (isDotMatrix && printerState.layout) {
+    if (printerControls.rawTotalLines) {
+      printerControls.rawTotalLines.value = String(printerState.layout.rawTotalLines || printerState.layout.totalLines || 40);
+    }
+    if (printerControls.rawLineWidth) {
+      printerControls.rawLineWidth.value = String(printerState.layout.rawLineWidth || 80);
+    }
+    if (printerControls.rawFeedMode && printerState.layout.rawFeedMode) {
+      printerControls.rawFeedMode.value = printerState.layout.rawFeedMode;
+    }
+    if (printerControls.rawExtraLines && Number.isFinite(printerState.layout.rawExtraLines)) {
+      printerControls.rawExtraLines.value = String(printerState.layout.rawExtraLines);
+    }
+    if (printerControls.rawSendFf) {
+      printerControls.rawSendFf.checked = Boolean(printerState.layout.rawSendFf);
+    }
+    if (printerControls.rawSet6Inch) {
+      printerControls.rawSet6Inch.checked = printerState.layout.rawSet6Inch !== false;
+    }
+  }
+
   renderTemplateControls();
   renderPageControls();
   renderQuickAddControls();
@@ -3651,6 +3672,29 @@ async function savePrinterLayout() {
   const currentType = currentPrinterType();
   const currentName = printerState.currentLayoutName || printerState.activeLayoutName || printerState.layout?.name || (currentType === "dot_matrix" ? "Dot Matrix Default" : "A4 Default 1");
 
+  if (currentType === "dot_matrix") {
+    if (printerControls.rawTotalLines) {
+      const val = Number(printerControls.rawTotalLines.value || 40);
+      printerState.layout.rawTotalLines = val;
+      printerState.layout.totalLines = val;
+    }
+    if (printerControls.rawLineWidth) {
+      printerState.layout.rawLineWidth = Number(printerControls.rawLineWidth.value || 80);
+    }
+    if (printerControls.rawFeedMode) {
+      printerState.layout.rawFeedMode = printerControls.rawFeedMode.value || "auto_40";
+    }
+    if (printerControls.rawExtraLines) {
+      printerState.layout.rawExtraLines = Number(printerControls.rawExtraLines.value || 2);
+    }
+    if (printerControls.rawSendFf) {
+      printerState.layout.rawSendFf = printerControls.rawSendFf.checked === true;
+    }
+    if (printerControls.rawSet6Inch) {
+      printerState.layout.rawSet6Inch = printerControls.rawSet6Inch.checked !== false;
+    }
+  }
+
   try {
     const response = await fetch(printerLayoutApiUrl, {
       method: "POST",
@@ -4000,7 +4044,14 @@ printerControls.tabDotMatrixRaw?.addEventListener("click", () => setViewMode("ra
 printerControls.rawFeedMode?.addEventListener("change", refreshDotMatrixRawPreview);
 printerControls.rawExtraLines?.addEventListener("input", refreshDotMatrixRawPreview);
 printerControls.rawLineWidth?.addEventListener("input", refreshDotMatrixRawPreview);
-printerControls.rawTotalLines?.addEventListener("input", refreshDotMatrixRawPreview);
+printerControls.rawTotalLines?.addEventListener("input", () => {
+  if (printerState.layout) {
+    const val = Number(printerControls.rawTotalLines.value || 40);
+    printerState.layout.rawTotalLines = val;
+    printerState.layout.totalLines = val;
+  }
+  refreshDotMatrixRawPreview();
+});
 printerControls.rawDirectPrintBtn?.addEventListener("click", performDirectRawPrint);
 
 document.querySelectorAll(".raw-palette-tile[data-raw-palette-kind]").forEach(tile => {

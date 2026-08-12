@@ -1136,6 +1136,37 @@ def normalize_printer_layout(layout, custom_columns, fallback_printer_type=DEFAU
             if isinstance(layout.get("rawStructuralBlocks"), list)
             else ([] if layout.get("templateKind") == "blank_canvas" else None)
         ) if printer_type == "dot_matrix" else None,
+        "rawTotalLines": normalize_int(
+            layout.get("rawTotalLines") or layout.get("totalLines"),
+            40,
+            10,
+            200,
+        ) if printer_type == "dot_matrix" else 40,
+        "totalLines": normalize_int(
+            layout.get("rawTotalLines") or layout.get("totalLines"),
+            40,
+            10,
+            200,
+        ) if printer_type == "dot_matrix" else 40,
+        "rawLineWidth": normalize_int(
+            layout.get("rawLineWidth"),
+            80,
+            20,
+            160,
+        ) if printer_type == "dot_matrix" else 80,
+        "rawFeedMode": normalize_text(
+            layout.get("rawFeedMode"),
+            "auto_40",
+            max_length=30,
+        ) if printer_type == "dot_matrix" else "auto_40",
+        "rawExtraLines": normalize_int(
+            layout.get("rawExtraLines"),
+            2,
+            0,
+            30,
+        ) if printer_type == "dot_matrix" else 2,
+        "rawSendFf": bool(layout.get("rawSendFf", False)) if printer_type == "dot_matrix" else False,
+        "rawSet6Inch": bool(layout.get("rawSet6Inch", True)) if printer_type == "dot_matrix" else True,
     }
 
 
